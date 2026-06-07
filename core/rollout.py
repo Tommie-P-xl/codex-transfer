@@ -62,8 +62,10 @@ class RolloutManager:
     def copy_rollout(self, source_path: str, new_provider: str) -> tuple[str, str]:
         src = self._resolve_path(source_path)
         new_id = str(uuid.uuid4())
-        stem = src.stem
-        new_name = f"{stem}-copy-{new_id[:8]}.jsonl"
+        # Generate filename in same format as Codex Desktop: rollout-YYYY-MM-DDTHH-MM-SS-THREADID.jsonl
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        new_name = f"rollout-{timestamp}-{new_id}.jsonl"
         dst = src.parent / new_name
         shutil.copy2(src, dst)
         content = dst.read_text(encoding="utf-8")
