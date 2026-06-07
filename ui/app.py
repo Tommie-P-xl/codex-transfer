@@ -41,16 +41,20 @@ def _icon_candidates() -> list[Path]:
 
 
 def _set_icon(window: tk.Tk | tk.Toplevel) -> None:
-    """设置窗口图标，优先使用 ICO 中最清晰的位图帧。"""
+    """设置窗口图标，让 Tk/Windows 按场景选择最合适的图标尺寸。"""
     for p in _icon_candidates():
         if not p.exists():
             continue
         try:
             image = Image.open(p)
-            image.load()
-            photo = ImageTk.PhotoImage(image)
-            window.iconphoto(True, photo)
-            setattr(window, "_codex_transfer_icon", photo)
+            ico = getattr(image, "ico", None)
+            sizes = sorted(ico.sizes() if ico else [image.size], key=lambda size: size[0] * size[1])
+            photos = []
+            for size in sizes:
+                frame = ico.getimage(size) if ico else image.resize(size, Image.Resampling.LANCZOS)
+                photos.append(ImageTk.PhotoImage(frame.convert("RGBA")))
+            window.iconphoto(True, *photos)
+            setattr(window, "_codex_transfer_icons", photos)
             try:
                 window.iconbitmap(str(p))
             except Exception:
@@ -674,13 +678,14 @@ class CodexTransferApp:
     def _ask_provider_name(self) -> str | None:
         """Show a modal dialog to enter a new provider name. Returns name or None."""
         dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
         dialog.title("新建归属")
         _set_icon(dialog)
         scaling = max(float(self.root.tk.call("tk", "scaling")), 1.0)
-        width = min(max(int(380 * scaling), 360), max(self.root.winfo_screenwidth() - 80, 320))
-        height = min(max(int(190 * scaling), 180), max(self.root.winfo_screenheight() - 80, 170))
+        width = min(max(int(360 * scaling), 350), max(self.root.winfo_screenwidth() - 80, 320))
+        height = min(max(int(150 * scaling), 150), max(self.root.winfo_screenheight() - 80, 145))
         dialog.geometry(f"{width}x{height}")
-        dialog.minsize(340, 170)
+        dialog.minsize(330, 145)
         dialog.resizable(True, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -695,7 +700,7 @@ class CodexTransferApp:
 
         result: list[str | None] = [None]
 
-        body = ttk.Frame(dialog, padding=(18, 16, 18, 12))
+        body = ttk.Frame(dialog, padding=(16, 12, 16, 10))
         body.pack(fill=BOTH, expand=True)
         body.columnconfigure(0, weight=1)
 
@@ -706,7 +711,7 @@ class CodexTransferApp:
         entry.focus_set()
 
         btn_frame = ttk.Frame(body)
-        btn_frame.grid(row=2, column=0, sticky=E, pady=(18, 0))
+        btn_frame.grid(row=2, column=0, sticky=E, pady=(12, 0))
 
         def on_ok() -> None:
             name = entry_var.get().strip()
@@ -725,6 +730,9 @@ class CodexTransferApp:
         # Enter key submits
         entry.bind("<Return>", lambda _: on_ok())
 
+        dialog.update_idletasks()
+        dialog.deiconify()
+        dialog.lift(self.root)
         dialog.wait_window()
         return result[0]
 
