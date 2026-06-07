@@ -87,6 +87,33 @@ def _resolve_rollout_path(codex_home: Path, rollout_path: str) -> Path:
     return codex_home / path
 
 
+def _clean_cell_text(value: str | None) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
+def _load_session_title_index(codex_home: Path) -> dict[str, str]:
+    index_path = codex_home / "session_index.jsonl"
+    titles: dict[str, str] = {}
+    if not index_path.exists():
+        return titles
+    try:
+        lines = index_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return titles
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        thread_id = payload.get("id")
+        thread_name = _clean_cell_text(payload.get("thread_name"))
+        if isinstance(thread_id, str) and thread_name:
+            titles[thread_id] = thread_name
+    return titles
+
+
 def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
     """让 Windows 标题栏跟随系统暗色/亮色主题（Win10 1809+）。"""
     import sys
@@ -130,6 +157,7 @@ class CodexTransferApp:
         self.db: CodexDB | None = None
         self.rollout: RolloutManager | None = None
         self._threads: list[ThreadRecord] = []
+        self._session_titles: dict[str, str] = {}
         self._sort_column: str = "time"
         self._sort_reverse: bool = True
         self._toast_after_id: str | None = None
@@ -351,6 +379,7 @@ class CodexTransferApp:
 
         self.db = CodexDB(db_path)
         self.rollout = RolloutManager(self.config.codex_home)
+        self._session_titles = _load_session_title_index(self.config.codex_home)
 
         # Populate filter dropdowns
         all_threads = self.db.list_threads()
@@ -396,10 +425,21 @@ class CodexTransferApp:
         threads = self.db.list_threads(
             provider=provider if provider != "(全部)" else None,
             cwd=cwd_query,
-            keyword=keyword or None,
         )
-        self._threads, self._missing_rollout_count = self._filter_existing_threads(threads)
+        threads, self._missing_rollout_count = self._filter_existing_threads(threads)
+        if keyword:
+            keyword_lower = keyword.lower()
+            threads = [
+                thread for thread in threads
+                if keyword_lower in self._display_title(thread).lower()
+                or keyword_lower in _clean_cell_text(thread.first_user_message).lower()
+                or keyword_lower in _clean_cell_text(thread.preview).lower()
+            ]
+        self._threads = threads
         self._refresh_table()
+
+    def _display_title(self, thread: ThreadRecord) -> str:
+        return self._session_titles.get(thread.id) or _clean_cell_text(thread.title) or "(无标题)"
 
     def _filter_existing_threads(self, threads: list[ThreadRecord]) -> tuple[list[ThreadRecord], int]:
         visible: list[ThreadRecord] = []
@@ -420,7 +460,7 @@ class CodexTransferApp:
         def sort_key(t: ThreadRecord) -> Any:
             col = self._sort_column
             if col == "title":
-                return t.title or ""
+                return self._display_title(t)
             if col == "time":
                 return t.updated_at
             if col == "cwd":
@@ -437,13 +477,13 @@ class CodexTransferApp:
             ts = datetime.datetime.fromtimestamp(t.updated_at).strftime("%Y-%m-%d %H:%M") if t.updated_at else ""
             archived_str = "是" if t.archived else ""
             # 去掉 cwd 中的 \\?\ 前缀
-            cwd_display = (t.cwd or "").replace("\\\\?\\", "").replace("\\?\\", "")
+            cwd_display = _clean_cell_text((t.cwd or "").replace("\\\\?\\", "").replace("\\?\\", ""))
             # CheckboxTreeview.insert automatically prepends the checkbox column value
             self._tree.insert("", END, iid=t.id, values=(
-                t.title or "(无标题)",
+                self._display_title(t),
                 ts,
                 cwd_display,
-                t.model_provider or "",
+                _clean_cell_text(t.model_provider),
                 archived_str,
             ))
 
@@ -599,7 +639,7 @@ class CodexTransferApp:
                 updated_at=t.updated_at,
                 model_provider=new_provider,
                 cwd=t.cwd,
-                title=t.title,
+                title=self._display_title(t),
             )
             count += 1
 
@@ -640,7 +680,7 @@ class CodexTransferApp:
                 updated_at=t.updated_at,
                 model_provider=new_name,
                 cwd=t.cwd,
-                title=t.title,
+                title=self._display_title(t),
             )
             count += 1
 
