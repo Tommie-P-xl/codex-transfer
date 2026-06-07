@@ -114,6 +114,22 @@ def _load_session_title_index(codex_home: Path) -> dict[str, str]:
     return titles
 
 
+def _append_session_index(codex_home: Path, thread_id: str, title: str) -> None:
+    """Append a new entry to session_index.jsonl for Codex Desktop compatibility."""
+    index_path = codex_home / "session_index.jsonl"
+    entry = {
+        "id": thread_id,
+        "thread_name": _clean_cell_text(title),
+        "updated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    }
+    line = json.dumps(entry, ensure_ascii=False) + "\n"
+    try:
+        with open(index_path, "a", encoding="utf-8") as f:
+            f.write(line)
+    except OSError:
+        pass
+
+
 def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
     """让 Windows 标题栏跟随系统暗色/亮色主题（Win10 1809+）。"""
     import sys
@@ -632,6 +648,7 @@ class CodexTransferApp:
             if t is None:
                 continue
             dst_path, new_id = self.rollout.copy_rollout(t.rollout_path, new_provider)
+            title = self._display_title(t)
             self.db.insert_thread(
                 thread_id=new_id,
                 rollout_path=dst_path,
@@ -639,8 +656,9 @@ class CodexTransferApp:
                 updated_at=t.updated_at,
                 model_provider=new_provider,
                 cwd=t.cwd,
-                title=self._display_title(t),
+                title=title,
             )
+            _append_session_index(self.config.codex_home, new_id, title)
             count += 1
 
         self._show_toast(f"已复制 {count} 条记录到归属 \"{new_provider}\"")
@@ -673,6 +691,7 @@ class CodexTransferApp:
             if t is None:
                 continue
             dst_path, new_id = self.rollout.copy_rollout(t.rollout_path, new_name)
+            title = self._display_title(t)
             self.db.insert_thread(
                 thread_id=new_id,
                 rollout_path=dst_path,
@@ -680,8 +699,9 @@ class CodexTransferApp:
                 updated_at=t.updated_at,
                 model_provider=new_name,
                 cwd=t.cwd,
-                title=self._display_title(t),
+                title=title,
             )
+            _append_session_index(self.config.codex_home, new_id, title)
             count += 1
 
         self._show_toast(f"已复制 {count} 条记录到新归属 \"{new_name}\"")
