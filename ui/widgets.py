@@ -8,17 +8,20 @@ from typing import Any
 
 
 class CheckboxTreeview(ttk.Treeview):
-    """Treeview with a checkbox column for multi-selection."""
+    """Treeview with a checkbox column for multi-selection.
+
+    The first data column displays checkboxes (☐ / ☑). Clicking toggles the state.
+    Supports select-all, deselect-all, invert-selection, and get checked items.
+    """
 
     def __init__(self, master: Any, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
         self._checked: set[str] = set()
-        self._checkbox_column: str = "#0"
         self.bind("<Button-1>", self._on_click, add=True)
 
     def _on_click(self, event: tk.Event) -> None:
         region = self.identify_region(event.x, event.y)
-        if region != "tree" and region != "cell":
+        if region not in ("cell", "tree"):
             return
         item = self.identify_row(event.y)
         if not item:
@@ -75,6 +78,7 @@ class CheckboxTreeview(ttk.Treeview):
         self._checked.clear()
 
     def insert(self, parent: str, index: str | int = tk.END, **kwargs: Any) -> str:
+        """Override insert to prepend checkbox column value."""
         values = kwargs.get("values", ())
         if isinstance(values, (list, tuple)):
             values = ("☐",) + tuple(values)

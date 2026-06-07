@@ -21,6 +21,8 @@ def build() -> None:
 
     if icon_path.exists():
         cmd.extend(["--icon", str(icon_path)])
+        # 把图标文件打包进 bundle，运行时可通过 sys._MEIPASS 访问
+        cmd.extend(["--add-data", f"{icon_path};assets"])
 
     cmd.extend([
         "--hidden-import", "ttkbootstrap",

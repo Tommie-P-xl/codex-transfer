@@ -19,7 +19,7 @@ class Config:
 
         self.codex_home: Path = Path.home() / ".codex"
         self.theme: str = "auto"
-        self.window_geometry: str = "1200x700"
+        self.window_geometry: str = "900x520"
 
         self._load()
 
@@ -31,7 +31,7 @@ class Config:
                 data = json.loads(self._path.read_text(encoding="utf-8"))
                 saved_codex_home = Path(data["codex_home"]) if "codex_home" in data else None
                 self.theme = data.get("theme", "auto")
-                self.window_geometry = data.get("window_geometry", "1200x700")
+                self.window_geometry = data.get("window_geometry", "900x520")
             except (json.JSONDecodeError, KeyError):
                 pass
 

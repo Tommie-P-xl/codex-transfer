@@ -47,6 +47,15 @@ def main() -> None:
     if not check_single_instance():
         sys.exit(0)
 
+    # DPI 自适应：让应用在不同分辨率屏幕上正常显示
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # Per-Monitor DPI Aware
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
     # Late imports to speed up single-instance check
     import ttkbootstrap as ttk
 
@@ -58,6 +67,8 @@ def main() -> None:
     theme_name = get_theme_name(config.theme)
 
     root = ttk.Window(themename=theme_name)
+    # 立即隐藏窗口，避免小窗口闪烁
+    root.withdraw()
 
     icon_path = Path(__file__).parent / "assets" / "icon.ico"
     if icon_path.exists():

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OMC state
+.omc/
+
+# pytest
+.pytest_cache/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# User config & data (privacy)
+config.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.jsonl
+
+# Env
+.env
+*.log

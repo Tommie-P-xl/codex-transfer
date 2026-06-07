@@ -5,15 +5,12 @@ from PIL import Image
 
 def convert_png_to_ico(png_path: str, ico_path: str) -> None:
     img = Image.open(png_path)
+    # 多尺寸：16(标题栏/任务栏) 32(桌面/Alt+Tab) 48(资源管理器) 256(高DPI)
     sizes = [(16, 16), (32, 32), (48, 48), (256, 256)]
-    icons = []
-    for size in sizes:
-        resized = img.resize(size, Image.Resampling.LANCZOS)
-        icons.append(resized)
+    icons = [img.resize(s, Image.Resampling.LANCZOS) for s in sizes]
     icons[0].save(
-        ico_path,
-        format="ICO",
-        sizes=[(icon.width, icon.height) for icon in icons],
+        ico_path, format="ICO",
+        sizes=[(s.width, s.height) for s in icons],
         append_images=icons[1:],
     )
     print(f"Created {ico_path} with sizes: {sizes}")

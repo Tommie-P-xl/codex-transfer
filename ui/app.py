@@ -16,21 +16,68 @@ from core.database import CodexDB, ThreadRecord, find_state_db
 from core.rollout import RolloutManager
 from ui.widgets import CheckboxTreeview
 
+def _set_icon(window: tk.Tk) -> None:
+    """设置窗口图标，支持开发模式和 PyInstaller 打包模式。"""
+    import sys
+    candidates = []
+    # PyInstaller 打包后的临时目录
+    if hasattr(sys, "_MEIPASS"):
+        candidates.append(Path(sys._MEIPASS) / "assets" / "icon.ico")
+    # 开发模式：相对于本文件
+    candidates.append(Path(__file__).resolve().parent.parent / "assets" / "icon.ico")
+    candidates.append(Path(__file__).resolve().parent / "icon.ico")
+    # 相对于 cwd
+    candidates.append(Path("assets") / "icon.ico")
+
+    for p in candidates:
+        if p.exists():
+            try:
+                window.iconbitmap(str(p))
+                return
+            except Exception:
+                continue
+
+
+def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
+    """让 Windows 标题栏跟随系统暗色/亮色主题（Win10 1809+）。"""
+    import sys
+    if sys.platform != "win32":
+        return
+
+    from ui.theme import detect_system_theme
+    # detect_system_theme 返回 "darkly" 或 "cosmo"
+    is_dark = detect_system_theme() == "darkly"
+
+    try:
+        import ctypes
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        # DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (Win10 1809+) / 19 (older)
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        value = ctypes.c_int(1 if is_dark else 0)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+            ctypes.byref(value), ctypes.sizeof(value)
+        )
+    except Exception:
+        pass
+
+
 COLUMNS = [
     ("check", "☐", 40, "center"),
-    ("title", "标题", 350, "w"),
-    ("time", "时间", 150, "center"),
-    ("cwd", "路径", 300, "w"),
-    ("provider", "归属", 120, "center"),
-    ("archived", "归档", 60, "center"),
+    ("title", "标题", 300, "w"),
+    ("time", "时间", 140, "center"),
+    ("cwd", "路径", 350, "w"),
+    ("provider", "归属", 100, "center"),
+    ("archived", "归档", 50, "center"),
 ]
 
 
 class CodexTransferApp:
     """Main application window that wires together all modules."""
 
-    def __init__(self) -> None:
-        self.config = Config()
+    def __init__(self, root: ttk.Window, config: Config) -> None:
+        self.root = root
+        self.config = config
         self.db: CodexDB | None = None
         self.rollout: RolloutManager | None = None
         self._threads: list[ThreadRecord] = []
@@ -45,19 +92,45 @@ class CodexTransferApp:
         self._build_action_bar()
         self._build_status_bar()
         self._load_data()
+        # 所有 UI 构建完成后显示窗口，避免小窗口闪烁
+        self.root.update_idletasks()
+        self.root.deiconify()
 
     # ------------------------------------------------------------------
     # Window setup
     # ------------------------------------------------------------------
     def _setup_window(self) -> None:
-        from ui.theme import get_theme_name
-
-        theme = get_theme_name(self.config.theme)
-        self.root = ttk.Window(themename=theme)
         self.root.title("Codex Transfer v1.0.0")
-        self.root.geometry(self.config.window_geometry)
-        self.root.minsize(800, 500)
+
+        # 使用配置的尺寸，但如果太小则用默认值
+        geo = self.config.window_geometry
+        try:
+            w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
+            if int(w) < 900 or int(h) < 520:
+                geo = "900x520"
+        except Exception:
+            geo = "900x520"
+        self.root.geometry(geo)
+        self.root.minsize(600, 450)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        # 设置窗口图标
+        _set_icon(self.root)
+
+        # 让 Windows 标题栏跟随系统暗色/亮色主题
+        _apply_titlebar_theme(self.root, self.config.theme)
+
+        # 配置全局字体 — Microsoft YaHei UI 更美观，字号 11
+        import tkinter.font as tkfont
+        for font_name in ("TkDefaultFont", "TkTextFont", "TkHeadingFont", "TkMenuFont", "TkTooltipFont"):
+            try:
+                tkfont.nametofont(font_name).configure(family="Microsoft YaHei UI", size=11)
+            except Exception:
+                pass
+        # Treeview 使用 style 设置字体
+        style = ttk.Style()
+        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=28)
+        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"))
 
     def _on_close(self) -> None:
         # Save current window geometry before closing
@@ -71,8 +144,10 @@ class CodexTransferApp:
     # Path bar
     # ------------------------------------------------------------------
     def _build_path_bar(self) -> None:
-        frame = ttk.LabelFrame(self.root, text="Codex 路径", padding=5)
-        frame.pack(fill=X, padx=10, pady=(10, 5))
+        lf = ttk.LabelFrame(self.root, text=" Codex 路径 ")
+        lf.pack(fill=X, padx=10, pady=(10, 5))
+        frame = ttk.Frame(lf, padding=8)
+        frame.pack(fill=X)
 
         self._path_var = tk.StringVar(value=str(self.config.codex_home))
         self._path_entry = ttk.Entry(frame, textvariable=self._path_var, state="readonly")
@@ -97,20 +172,24 @@ class CodexTransferApp:
     # Filter bar
     # ------------------------------------------------------------------
     def _build_filter_bar(self) -> None:
-        frame = ttk.LabelFrame(self.root, text="筛选", padding=5)
-        frame.pack(fill=X, padx=10, pady=5)
+        lf = ttk.LabelFrame(self.root, text=" 筛选 ")
+        lf.pack(fill=X, padx=10, pady=5)
+        frame = ttk.Frame(lf, padding=8)
+        frame.pack(fill=X)
 
         # Provider dropdown
         ttk.Label(frame, text="归属:").pack(side=LEFT, padx=(0, 2))
         self._provider_var = tk.StringVar()
         self._provider_combo = ttk.Combobox(frame, textvariable=self._provider_var, state="readonly", width=14)
         self._provider_combo.pack(side=LEFT, padx=(0, 10))
+        self._provider_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # CWD dropdown
         ttk.Label(frame, text="路径:").pack(side=LEFT, padx=(0, 2))
         self._cwd_var = tk.StringVar()
         self._cwd_combo = ttk.Combobox(frame, textvariable=self._cwd_var, state="readonly", width=30)
         self._cwd_combo.pack(side=LEFT, padx=(0, 10))
+        self._cwd_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # Keyword search
         ttk.Label(frame, text="关键词:").pack(side=LEFT, padx=(0, 2))
@@ -130,17 +209,14 @@ class CodexTransferApp:
         frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
 
         col_ids = [c[0] for c in COLUMNS]
-        col_headers = [c[1] for c in COLUMNS]
 
-        self._tree = CheckboxTreeview(frame, columns=col_ids[1:], show="tree headings", selectmode="none")
-        # Configure #0 as the checkbox header column
-        self._tree.heading("#0", text=col_headers[0], anchor="center")
-        self._tree.column("#0", width=COLUMNS[0][2], minwidth=COLUMNS[0][2], anchor=COLUMNS[0][3], stretch=False)
+        self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12)
 
-        for i, (cid, header, width, anchor) in enumerate(COLUMNS[1:], start=1):
-            self._tree.heading(cid, text=header, anchor=anchor,
-                               command=lambda c=cid: self._sort_by(c))
-            self._tree.column(cid, width=width, minwidth=60, anchor=anchor, stretch=(cid == "title"))
+        # 配置所有列
+        for cid, header, width, anchor in COLUMNS:
+            self._tree.heading(cid, text=header, anchor="center",
+                               command=lambda c=cid: self._sort_by(c) if c != "check" else None)
+            self._tree.column(cid, width=width, minwidth=40, anchor=anchor, stretch=False)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=self._tree.yview)
@@ -155,8 +231,10 @@ class CodexTransferApp:
     # Action bar
     # ------------------------------------------------------------------
     def _build_action_bar(self) -> None:
-        frame = ttk.LabelFrame(self.root, text="操作", padding=5)
-        frame.pack(fill=X, padx=10, pady=5)
+        lf = ttk.LabelFrame(self.root, text=" 操作 ")
+        lf.pack(fill=X, padx=10, pady=5)
+        frame = ttk.Frame(lf, padding=8)
+        frame.pack(fill=X)
 
         # Selection buttons
         ttk.Button(frame, text="全选", command=self._tree.check_all, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
@@ -224,11 +302,18 @@ class CodexTransferApp:
 
         # Populate filter dropdowns
         providers = self.db.get_distinct_providers()
-        cwds = self.db.get_distinct_cwds()
+        cwds_raw = self.db.get_distinct_cwds()
+        # 去掉路径中的 \\?\ 前缀用于显示，同时建立 显示→原始 的映射
+        self._cwd_display_map: dict[str, str] = {}
+        cwds_clean: list[str] = []
+        for c in cwds_raw:
+            clean = c.replace("\\\\?\\", "").replace("\\?\\", "")
+            self._cwd_display_map[clean] = c
+            cwds_clean.append(clean)
 
         self._provider_combo["values"] = ["(全部)"] + providers
         self._provider_var.set("(全部)")
-        self._cwd_combo["values"] = ["(全部)"] + cwds
+        self._cwd_combo["values"] = ["(全部)"] + cwds_clean
         self._cwd_var.set("(全部)")
 
         # Populate action bar dropdowns
@@ -248,9 +333,14 @@ class CodexTransferApp:
         cwd = self._cwd_var.get()
         keyword = self._keyword_var.get().strip()
 
+        # 把显示路径映射回数据库原始路径
+        cwd_query = None
+        if cwd != "(全部)":
+            cwd_query = self._cwd_display_map.get(cwd, cwd)
+
         threads = self.db.list_threads(
             provider=provider if provider != "(全部)" else None,
-            cwd=cwd if cwd != "(全部)" else None,
+            cwd=cwd_query,
             keyword=keyword or None,
         )
         self._threads = threads
@@ -281,11 +371,13 @@ class CodexTransferApp:
         for t in sorted_threads:
             ts = datetime.datetime.fromtimestamp(t.updated_at).strftime("%Y-%m-%d %H:%M") if t.updated_at else ""
             archived_str = "是" if t.archived else ""
+            # 去掉 cwd 中的 \\?\ 前缀
+            cwd_display = (t.cwd or "").replace("\\\\?\\", "").replace("\\?\\", "")
             # CheckboxTreeview.insert automatically prepends the checkbox column value
             self._tree.insert("", END, iid=t.id, values=(
                 t.title or "(无标题)",
                 ts,
-                t.cwd or "",
+                cwd_display,
                 t.model_provider or "",
                 archived_str,
             ))
@@ -296,6 +388,8 @@ class CodexTransferApp:
     # Sorting
     # ------------------------------------------------------------------
     def _sort_by(self, column: str) -> None:
+        if column == "check":
+            return
         if self._sort_column == column:
             self._sort_reverse = not self._sort_reverse
         else:
@@ -527,8 +621,9 @@ class CodexTransferApp:
         if not item:
             return
         values = self._tree.item(item, "values")
-        if values:
-            title = values[1] if len(values) > 1 else values[0]
+        # values[0]=checkbox, values[1]=title
+        if values and len(values) > 1:
+            title = values[1]
             self.root.clipboard_clear()
             self.root.clipboard_append(title)
             self._show_toast(f"已复制标题: {title}")
