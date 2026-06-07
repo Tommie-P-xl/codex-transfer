@@ -38,3 +38,8 @@ config.json
 # Env
 .env
 *.log
+
+# 不上传的目录
+docs/
+tests/
+assets/convert_icon.py
