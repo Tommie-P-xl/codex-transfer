@@ -3,39 +3,84 @@
 from __future__ import annotations
 
 import datetime
+import json
+import re
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from typing import Any
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+import webbrowser
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from PIL import Image, ImageTk
 
 from core.config import Config
 from core.database import CodexDB, ThreadRecord, find_state_db
 from core.rollout import RolloutManager
 from ui.widgets import CheckboxTreeview
 
-def _set_icon(window: tk.Tk) -> None:
-    """设置窗口图标，支持开发模式和 PyInstaller 打包模式。"""
+APP_VERSION = "1.0.0"
+GITHUB_REPO = "Tommie-P-xl/codex-transfer"
+LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
+
+
+def _icon_candidates() -> list[Path]:
     import sys
     candidates = []
-    # PyInstaller 打包后的临时目录
     if hasattr(sys, "_MEIPASS"):
         candidates.append(Path(sys._MEIPASS) / "assets" / "icon.ico")
-    # 开发模式：相对于本文件
     candidates.append(Path(__file__).resolve().parent.parent / "assets" / "icon.ico")
     candidates.append(Path(__file__).resolve().parent / "icon.ico")
-    # 相对于 cwd
     candidates.append(Path("assets") / "icon.ico")
+    return candidates
 
-    for p in candidates:
-        if p.exists():
+
+def _set_icon(window: tk.Tk | tk.Toplevel) -> None:
+    """设置窗口图标，优先使用 ICO 中最清晰的位图帧。"""
+    for p in _icon_candidates():
+        if not p.exists():
+            continue
+        try:
+            image = Image.open(p)
+            image.load()
+            photo = ImageTk.PhotoImage(image)
+            window.iconphoto(True, photo)
+            setattr(window, "_codex_transfer_icon", photo)
+            try:
+                window.iconbitmap(str(p))
+            except Exception:
+                pass
+            return
+        except Exception:
             try:
                 window.iconbitmap(str(p))
                 return
             except Exception:
                 continue
+
+
+def _parse_version(value: str) -> tuple[int, ...]:
+    parts = re.findall(r"\d+", value)
+    return tuple(int(part) for part in parts[:3]) or (0,)
+
+
+def _is_newer_version(remote: str, current: str) -> bool:
+    remote_parts = _parse_version(remote)
+    current_parts = _parse_version(current)
+    width = max(len(remote_parts), len(current_parts))
+    return remote_parts + (0,) * (width - len(remote_parts)) > current_parts + (0,) * (width - len(current_parts))
+
+
+def _resolve_rollout_path(codex_home: Path, rollout_path: str) -> Path:
+    path = Path(rollout_path)
+    if path.is_absolute():
+        return path
+    return codex_home / path
 
 
 def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
@@ -100,7 +145,7 @@ class CodexTransferApp:
     # Window setup
     # ------------------------------------------------------------------
     def _setup_window(self) -> None:
-        self.root.title("Codex Transfer v1.0.0")
+        self.root.title(f"Codex Transfer v{APP_VERSION}")
 
         # 使用配置的尺寸，但如果太小则用默认值
         geo = self.config.window_geometry
@@ -157,7 +202,10 @@ class CodexTransferApp:
         btn_change.pack(side=LEFT, padx=(0, 5))
 
         btn_refresh = ttk.Button(frame, text="刷新", command=self._load_data, bootstyle=INFO)
-        btn_refresh.pack(side=LEFT)
+        btn_refresh.pack(side=LEFT, padx=(0, 5))
+
+        btn_update = ttk.Button(frame, text="检查更新", command=self._check_for_updates, bootstyle=SECONDARY)
+        btn_update.pack(side=LEFT)
 
     def _change_codex_path(self) -> None:
         chosen = filedialog.askdirectory(title="选择 Codex 根目录")
@@ -301,8 +349,11 @@ class CodexTransferApp:
         self.rollout = RolloutManager(self.config.codex_home)
 
         # Populate filter dropdowns
-        providers = self.db.get_distinct_providers()
-        cwds_raw = self.db.get_distinct_cwds()
+        all_threads = self.db.list_threads()
+        active_threads, missing_count = self._filter_existing_threads(all_threads)
+        self._missing_rollout_count = missing_count
+        providers = sorted({t.model_provider for t in active_threads if t.model_provider})
+        cwds_raw = sorted({t.cwd for t in active_threads if t.cwd})
         # 去掉路径中的 \\?\ 前缀用于显示，同时建立 显示→原始 的映射
         self._cwd_display_map: dict[str, str] = {}
         cwds_clean: list[str] = []
@@ -343,8 +394,18 @@ class CodexTransferApp:
             cwd=cwd_query,
             keyword=keyword or None,
         )
-        self._threads = threads
+        self._threads, self._missing_rollout_count = self._filter_existing_threads(threads)
         self._refresh_table()
+
+    def _filter_existing_threads(self, threads: list[ThreadRecord]) -> tuple[list[ThreadRecord], int]:
+        visible: list[ThreadRecord] = []
+        missing = 0
+        for thread in threads:
+            if _resolve_rollout_path(self.config.codex_home, thread.rollout_path).exists():
+                visible.append(thread)
+            else:
+                missing += 1
+        return visible, missing
 
     def _refresh_table(self) -> None:
         self._tree.clear_checked()
@@ -403,7 +464,51 @@ class CodexTransferApp:
     def _update_status(self) -> None:
         total = len(self._threads)
         checked = len(self._tree.get_checked_ids())
-        self._status_var.set(f"共 {total} 条记录，已选 {checked} 条")
+        suffix = f"，已隐藏 {self._missing_rollout_count} 条已删除记录" if getattr(self, "_missing_rollout_count", 0) else ""
+        self._status_var.set(f"共 {total} 条记录，已选 {checked} 条{suffix}")
+
+    def _check_for_updates(self) -> None:
+        self._show_toast("正在检查更新...")
+
+        def worker() -> None:
+            try:
+                request = Request(
+                    LATEST_RELEASE_API,
+                    headers={
+                        "Accept": "application/vnd.github+json",
+                        "User-Agent": f"CodexTransfer/{APP_VERSION}",
+                    },
+                )
+                with urlopen(request, timeout=10) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                latest = str(data.get("tag_name") or data.get("name") or "").lstrip("v")
+                html_url = str(data.get("html_url") or RELEASES_URL)
+                if not latest:
+                    raise ValueError("GitHub Releases 未返回版本号")
+                self.root.after(0, lambda: self._show_update_result(latest, html_url))
+            except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+                detail = str(exc)
+                self.root.after(0, lambda detail=detail: self._show_update_error(detail))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_update_result(self, latest: str, html_url: str) -> None:
+        if _is_newer_version(latest, APP_VERSION):
+            ok = messagebox.askyesno(
+                "发现新版本",
+                f"当前版本：v{APP_VERSION}\n最新版本：v{latest}\n\n是否打开下载页面？",
+                parent=self.root,
+            )
+            if ok:
+                webbrowser.open(html_url)
+            self._show_toast(f"发现新版本 v{latest}")
+        else:
+            messagebox.showinfo("检查更新", f"当前已是最新版本：v{APP_VERSION}", parent=self.root)
+            self._show_toast("当前已是最新版本")
+
+    def _show_update_error(self, detail: str) -> None:
+        messagebox.showwarning("检查更新失败", f"无法获取最新版本信息。\n\n{detail}", parent=self.root)
+        self._show_toast("检查更新失败")
 
     # ------------------------------------------------------------------
     # Move to existing provider
@@ -570,27 +675,38 @@ class CodexTransferApp:
         """Show a modal dialog to enter a new provider name. Returns name or None."""
         dialog = tk.Toplevel(self.root)
         dialog.title("新建归属")
-        dialog.geometry("350x150")
-        dialog.resizable(False, False)
+        _set_icon(dialog)
+        scaling = max(float(self.root.tk.call("tk", "scaling")), 1.0)
+        width = min(max(int(380 * scaling), 360), max(self.root.winfo_screenwidth() - 80, 320))
+        height = min(max(int(190 * scaling), 180), max(self.root.winfo_screenheight() - 80, 170))
+        dialog.geometry(f"{width}x{height}")
+        dialog.minsize(340, 170)
+        dialog.resizable(True, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
         # Center over parent
         dialog.update_idletasks()
-        x = self.root.winfo_x() + (self.root.winfo_width() - 350) // 2
-        y = self.root.winfo_y() + (self.root.winfo_height() - 150) // 2
-        dialog.geometry(f"+{x}+{y}")
+        x = self.root.winfo_x() + (self.root.winfo_width() - width) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - height) // 2
+        x = max(0, min(x, self.root.winfo_screenwidth() - width))
+        y = max(0, min(y, self.root.winfo_screenheight() - height))
+        dialog.geometry(f"{width}x{height}+{x}+{y}")
 
         result: list[str | None] = [None]
 
-        ttk.Label(dialog, text="请输入新的归属名称:").pack(pady=(20, 5))
+        body = ttk.Frame(dialog, padding=(18, 16, 18, 12))
+        body.pack(fill=BOTH, expand=True)
+        body.columnconfigure(0, weight=1)
+
+        ttk.Label(body, text="请输入新的归属名称:").grid(row=0, column=0, sticky=W, pady=(0, 8))
         entry_var = tk.StringVar()
-        entry = ttk.Entry(dialog, textvariable=entry_var, width=30)
-        entry.pack(pady=5)
+        entry = ttk.Entry(body, textvariable=entry_var)
+        entry.grid(row=1, column=0, sticky=EW)
         entry.focus_set()
 
-        btn_frame = ttk.Frame(dialog)
-        btn_frame.pack(pady=15)
+        btn_frame = ttk.Frame(body)
+        btn_frame.grid(row=2, column=0, sticky=E, pady=(18, 0))
 
         def on_ok() -> None:
             name = entry_var.get().strip()
@@ -603,8 +719,8 @@ class CodexTransferApp:
         def on_cancel() -> None:
             dialog.destroy()
 
-        ttk.Button(btn_frame, text="确定", command=on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=10)
-        ttk.Button(btn_frame, text="取消", command=on_cancel, bootstyle=SECONDARY).pack(side=LEFT, padx=10)
+        ttk.Button(btn_frame, text="确定", command=on_ok, bootstyle=PRIMARY, width=10).pack(side=LEFT, padx=(0, 8))
+        ttk.Button(btn_frame, text="取消", command=on_cancel, bootstyle=SECONDARY, width=10).pack(side=LEFT)
 
         # Enter key submits
         entry.bind("<Return>", lambda _: on_ok())

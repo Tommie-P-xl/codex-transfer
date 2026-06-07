@@ -10,6 +10,8 @@ from pathlib import Path
 # Windows single-instance constants
 MUTEX_NAME = "CodexTransfer_SingleInstance"
 ERROR_ALREADY_EXISTS = 183
+APP_USER_MODEL_ID = "TommiePxl.CodexTransfer"
+APP_TITLE = "Codex Transfer v1.0.0"
 
 
 def check_single_instance() -> bool:
@@ -34,7 +36,7 @@ def _activate_existing_window() -> None:
     """Find and activate the existing Codex Transfer window."""
     try:
         user32 = ctypes.windll.user32
-        hwnd = user32.FindWindowW(None, "Codex Transfer v1.0.0")
+        hwnd = user32.FindWindowW(None, APP_TITLE)
         if hwnd:
             user32.ShowWindow(hwnd, 9)  # SW_RESTORE
             user32.SetForegroundWindow(hwnd)
@@ -48,6 +50,11 @@ def main() -> None:
         sys.exit(0)
 
     # DPI 自适应：让应用在不同分辨率屏幕上正常显示
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+    except Exception:
+        pass
+
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)  # Per-Monitor DPI Aware
     except Exception:
