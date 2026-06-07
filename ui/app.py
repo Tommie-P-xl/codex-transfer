@@ -130,6 +130,48 @@ def _append_session_index(codex_home: Path, thread_id: str, title: str) -> None:
         pass
 
 
+def _sync_session_index(codex_home: Path, threads: list[ThreadRecord], session_titles: dict[str, str]) -> None:
+    """Sync database threads to session_index.jsonl, adding any missing entries."""
+    index_path = codex_home / "session_index.jsonl"
+
+    # Load existing entries
+    existing_ids: set[str] = set()
+    if index_path.exists():
+        try:
+            for line in index_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                    if isinstance(payload.get("id"), str):
+                        existing_ids.add(payload["id"])
+                except json.JSONDecodeError:
+                    continue
+        except OSError:
+            pass
+
+    # Find threads missing from session_index
+    missing_threads = []
+    for thread in threads:
+        if thread.id not in existing_ids:
+            title = session_titles.get(thread.id) or _clean_cell_text(thread.title) or "(无标题)"
+            missing_threads.append((thread.id, title))
+
+    # Append missing entries
+    if missing_threads:
+        try:
+            with open(index_path, "a", encoding="utf-8") as f:
+                for thread_id, title in missing_threads:
+                    entry = {
+                        "id": thread_id,
+                        "thread_name": _clean_cell_text(title),
+                        "updated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    }
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
+
 def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
     """让 Windows 标题栏跟随系统暗色/亮色主题（Win10 1809+）。"""
     import sys
@@ -401,6 +443,9 @@ class CodexTransferApp:
         all_threads = self.db.list_threads()
         active_threads, missing_count = self._filter_existing_threads(all_threads)
         self._missing_rollout_count = missing_count
+
+        # Sync database threads to session_index.jsonl for Codex Desktop compatibility
+        _sync_session_index(self.config.codex_home, active_threads, self._session_titles)
         providers = sorted({t.model_provider for t in active_threads if t.model_provider})
         cwds_raw = sorted({t.cwd for t in active_threads if t.cwd})
         # 去掉路径中的 \\?\ 前缀用于显示，同时建立 显示→原始 的映射
