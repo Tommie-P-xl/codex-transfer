@@ -19,6 +19,7 @@ def build() -> None:
         "--include-data-dir=assets=assets",
         "--output-filename=CodexTransfer.exe",
         "--output-dir=" + str(project_dir / "dist"),
+        "--assume-yes-for-downloads",
     ]
 
     if icon_path.exists():
