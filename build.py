@@ -1,4 +1,4 @@
-"""Build Codex Transfer into a standalone .exe using PyInstaller."""
+"""Build Codex Transfer into a standalone .exe using Nuitka."""
 from __future__ import annotations
 
 import subprocess
@@ -12,42 +12,17 @@ def build() -> None:
     main_script = project_dir / "main.py"
 
     cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--onefile", "--windowed",
-        "--name", "CodexTransfer", "--clean",
-        # Point to custom hooks directory (Step 2)
-        "--additional-hooks-dir", str(project_dir / "hooks"),
+        sys.executable, "-m", "nuitka",
+        "--onefile",
+        "--windows-console-mode=disable",
+        "--enable-plugin=tk-inter",
+        "--include-data-dir=assets=assets",
+        "--output-filename=CodexTransfer.exe",
+        "--output-dir=" + str(project_dir / "dist"),
     ]
 
     if icon_path.exists():
-        cmd.extend(["--icon", str(icon_path)])
-        cmd.extend(["--add-data", f"{icon_path};assets"])
-
-    # Precise hidden imports (Step 1: avoid bundling entire PIL)
-    cmd.extend([
-        "--hidden-import", "ttkbootstrap",
-        "--hidden-import", "PIL.Image",
-        "--hidden-import", "PIL.ImageTk",
-        "--collect-submodules", "PIL",
-        "--hidden-import", "sqlite3",
-    ])
-
-    # Exclude unused standard library modules (Step 1: save ~3-5 MB)
-    excludes = [
-        "email",    "html",         "xml",       "unittest",
-        "distutils", "pydoc",        "doctest",   "difflib",
-        "multiprocessing", "concurrent", "asyncio",
-        "http",      "xmlrpc",       "ftplib",
-        "imaplib",   "poplib",       "smtplib",   "telnetlib",
-        "turtle",    "curses",       "antigravity", "this",
-    ]
-    for m in excludes:
-        cmd.extend(["--exclude-module", m])
-
-    # UPX compression (Step 1: install UPX and set path)
-    upx_path = Path(r"C:\tools\upx")
-    if upx_path.exists():
-        cmd.extend(["--upx-dir", str(upx_path)])
+        cmd.append(f"--windows-icon-from-ico={icon_path}")
 
     cmd.append(str(main_script))
 

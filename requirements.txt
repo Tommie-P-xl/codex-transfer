@@ -1,3 +1,5 @@
 ttkbootstrap>=1.10
 Pillow>=10.0
-pyinstaller>=6.0
+nuitka>=2.0
+ordered-set
+zstandard
