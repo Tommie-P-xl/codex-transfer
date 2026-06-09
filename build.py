@@ -13,22 +13,41 @@ def build() -> None:
 
     cmd = [
         sys.executable, "-m", "PyInstaller",
-        "--onefile",
-        "--windowed",
-        "--name", "CodexTransfer",
-        "--clean",
+        "--onefile", "--windowed",
+        "--name", "CodexTransfer", "--clean",
+        # Point to custom hooks directory (Step 2)
+        "--additional-hooks-dir", str(project_dir / "hooks"),
     ]
 
     if icon_path.exists():
         cmd.extend(["--icon", str(icon_path)])
-        # 把图标文件打包进 bundle，运行时可通过 sys._MEIPASS 访问
         cmd.extend(["--add-data", f"{icon_path};assets"])
 
+    # Precise hidden imports (Step 1: avoid bundling entire PIL)
     cmd.extend([
         "--hidden-import", "ttkbootstrap",
-        "--hidden-import", "PIL",
+        "--hidden-import", "PIL.Image",
+        "--hidden-import", "PIL.ImageTk",
+        "--collect-submodules", "PIL",
         "--hidden-import", "sqlite3",
     ])
+
+    # Exclude unused standard library modules (Step 1: save ~3-5 MB)
+    excludes = [
+        "email",    "html",         "xml",       "unittest",
+        "distutils", "pydoc",        "doctest",   "difflib",
+        "multiprocessing", "concurrent", "asyncio",
+        "http",      "xmlrpc",       "ftplib",
+        "imaplib",   "poplib",       "smtplib",   "telnetlib",
+        "turtle",    "curses",       "antigravity", "this",
+    ]
+    for m in excludes:
+        cmd.extend(["--exclude-module", m])
+
+    # UPX compression (Step 1: install UPX and set path)
+    upx_path = Path(r"C:\tools\upx")
+    if upx_path.exists():
+        cmd.extend(["--upx-dir", str(upx_path)])
 
     cmd.append(str(main_script))
 

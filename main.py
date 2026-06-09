@@ -11,7 +11,7 @@ from pathlib import Path
 MUTEX_NAME = "CodexTransfer_SingleInstance"
 ERROR_ALREADY_EXISTS = 183
 APP_USER_MODEL_ID = "TommiePxl.CodexTransfer"
-APP_TITLE = "Codex Transfer v1.0.0"
+APP_TITLE = "Codex Transfer v1.1.0"
 
 
 def check_single_instance() -> bool:

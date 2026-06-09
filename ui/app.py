@@ -23,7 +23,7 @@ from core.database import CodexDB, ThreadRecord, find_state_db
 from core.rollout import RolloutManager
 from ui.widgets import CheckboxTreeview
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 GITHUB_REPO = "Tommie-P-xl/codex-transfer"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
