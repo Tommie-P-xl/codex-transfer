@@ -361,29 +361,33 @@ class CodexTransferApp:
         frame = ttk.Frame(lf, padding=8)
         frame.pack(fill=X)
 
+        # 使用grid布局，设置列权重让组件能弹性伸缩
+        frame.columnconfigure(1, weight=1)  # 路径下拉框可伸缩
+        frame.columnconfigure(3, weight=1)  # 关键词输入框可伸缩
+
         # Provider dropdown
-        ttk.Label(frame, text="归属:").pack(side=LEFT, padx=(0, 2))
+        ttk.Label(frame, text="归属:").grid(row=0, column=0, sticky=W, padx=(0, 2))
         self._provider_var = tk.StringVar()
         self._provider_combo = ttk.Combobox(frame, textvariable=self._provider_var, state="readonly", width=14)
-        self._provider_combo.pack(side=LEFT, padx=(0, 10))
+        self._provider_combo.grid(row=0, column=1, sticky=EW, padx=(0, 10))
         self._provider_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # CWD dropdown
-        ttk.Label(frame, text="路径:").pack(side=LEFT, padx=(0, 2))
+        ttk.Label(frame, text="路径:").grid(row=0, column=2, sticky=W, padx=(0, 2))
         self._cwd_var = tk.StringVar()
         self._cwd_combo = ttk.Combobox(frame, textvariable=self._cwd_var, state="readonly", width=30)
-        self._cwd_combo.pack(side=LEFT, padx=(0, 10))
+        self._cwd_combo.grid(row=0, column=3, sticky=EW, padx=(0, 10))
         self._cwd_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # Keyword search
-        ttk.Label(frame, text="关键词:").pack(side=LEFT, padx=(0, 2))
+        ttk.Label(frame, text="关键词:").grid(row=0, column=4, sticky=W, padx=(0, 2))
         self._keyword_var = tk.StringVar()
         keyword_entry = ttk.Entry(frame, textvariable=self._keyword_var, width=20)
-        keyword_entry.pack(side=LEFT, padx=(0, 5))
+        keyword_entry.grid(row=0, column=5, sticky=EW, padx=(0, 5))
         keyword_entry.bind("<Return>", lambda _: self._apply_filters())
 
         btn_search = ttk.Button(frame, text="🔍", command=self._apply_filters, bootstyle=SECONDARY, width=3)
-        btn_search.pack(side=LEFT)
+        btn_search.grid(row=0, column=6, padx=(0, 0))
 
     # ------------------------------------------------------------------
     # Main table
