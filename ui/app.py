@@ -198,21 +198,20 @@ def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
 
 COLUMNS = [
     ("check", "☐", 40, "center"),
-    ("title", "标题", 300, "w"),
-    ("time", "时间", 140, "center"),
-    ("cwd", "路径", 350, "w"),
-    ("provider", "归属", 100, "center"),
-    ("archived", "归档", 50, "center"),
+    ("title", "标题", 260, "w"),
+    ("time", "时间", 130, "center"),
+    ("cwd", "路径", 280, "w"),
+    ("provider", "归属", 120, "center"),
+    ("archived", "归档", 54, "center"),
 ]
 
 
 class CodexTransferApp:
     """Main application window that wires together all modules."""
 
-    def __init__(self, root: ttk.Window, config: Config, dpi_scale: float = 1.0) -> None:
+    def __init__(self, root: ttk.Window, config: Config) -> None:
         self.root = root
         self.config = config
-        self.dpi_scale = dpi_scale
         self.db: CodexDB | None = None
         self.rollout: RolloutManager | None = None
         self._threads: list[ThreadRecord] = []
@@ -237,19 +236,15 @@ class CodexTransferApp:
     # ------------------------------------------------------------------
     def _setup_window(self) -> None:
         self.root.title(f"Codex Transfer v{APP_VERSION}")
-        scale = self.dpi_scale
 
-        # 使用配置的尺寸，但如果太小则用默认值；高 DPI 屏幕下按比例放大默认值
-        # 注意：只对默认/最小窗口尺寸做 DPI 缩放，ttk 控件由 tkinter 自动处理
-        default_w = int(900 * scale)
-        default_h = int(520 * scale)
+        # 使用配置的尺寸，太小则用默认值；窗口尺寸不做 DPI 缩放，由系统自动处理
         geo = self.config.window_geometry
         try:
             w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
             if int(w) < 900 or int(h) < 520:
-                geo = f"{default_w}x{default_h}"
+                geo = "900x520"
         except Exception:
-            geo = f"{default_w}x{default_h}"
+            geo = "900x520"
         self.root.geometry(geo)
         self.root.minsize(600, 450)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -270,7 +265,7 @@ class CodexTransferApp:
                 pass
         # Treeview 使用 style 设置字体
         style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=28)
+        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=32)
         style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"))
 
     def _on_close(self) -> None:
@@ -356,11 +351,23 @@ class CodexTransferApp:
 
         self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12)
 
-        # 配置所有列
+        # 配置所有列，最后一列自动填充剩余空间
         for cid, header, width, anchor in COLUMNS:
-            self._tree.heading(cid, text=header, anchor="center",
-                               command=lambda c=cid: self._sort_by(c) if c != "check" else None)
-            self._tree.column(cid, width=width, minwidth=40, anchor=anchor, stretch=False)
+            if cid == "check":
+                self._tree.heading(cid, text=header, anchor="center")
+            else:
+                self._tree.heading(cid, text=header, anchor="center",
+                                   command=lambda c=cid: self._sort_by(c))
+            self._tree.column(cid, width=width, minwidth=40, anchor=anchor,
+                              stretch=(cid == "archived"))
+
+        # 点击左上角复选框标题栏：全选/全不选切换
+        def _toggle_all() -> None:
+            if self._tree.get_children() and len(self._tree.get_checked_ids()) == len(self._tree.get_children()):
+                self._tree.uncheck_all()
+            else:
+                self._tree.check_all()
+        self._tree.heading("check", text="☐", anchor="center", command=_toggle_all)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=self._tree.yview)
