@@ -201,8 +201,8 @@ COLUMNS = [
     ("title", "标题", 200, "w"),
     ("time", "时间", 140, "center"),
     ("cwd", "路径", 200, "w"),
-    ("provider", "归属", 80, "center"),
-    ("archived", "归档", 56, "center"),
+    ("provider", "归属", 90, "center"),
+    ("archived", "归档", 72, "center"),
 ]
 
 
@@ -229,6 +229,7 @@ class CodexTransferApp:
         self._load_data()
         # 所有 UI 构建完成后显示窗口，避免小窗口闪烁
         self.root.update_idletasks()
+        self._adjust_column_widths()
         self.root.deiconify()
 
     # ------------------------------------------------------------------
@@ -237,14 +238,16 @@ class CodexTransferApp:
     def _setup_window(self) -> None:
         self.root.title(f"Codex Transfer v{APP_VERSION}")
 
-        # 使用配置的尺寸，太小则用默认值；窗口尺寸不做 DPI 缩放，由系统自动处理
+        # 使用配置的尺寸，太小则按屏幕比例计算默认值（参考 1987×1261 / 3200×2000）
         geo = self.config.window_geometry
         try:
             w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
             if int(w) < 660 or int(h) < 420:
-                geo = "660x420"
+                raise ValueError
         except Exception:
-            geo = "660x420"
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            geo = f"{int(sw * 0.621)}x{int(sh * 0.631)}"
         self.root.geometry(geo)
         self.root.minsize(500, 380)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -263,10 +266,12 @@ class CodexTransferApp:
                 tkfont.nametofont(font_name).configure(family="Microsoft YaHei UI", size=11)
             except Exception:
                 pass
-        # Treeview 使用 style 设置字体
+        # Treeview 使用 style 设置字体、行高、列分隔线
         style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=36)
-        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"))
+        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=44,
+                         borderwidth=1, relief="solid")
+        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"),
+                         borderwidth=1, relief="solid")
 
     def _on_close(self) -> None:
         # Save current window geometry before closing
@@ -352,16 +357,16 @@ class CodexTransferApp:
     # Main table
     # ------------------------------------------------------------------
     def _build_table(self) -> None:
-        frame = ttk.Frame(self.root)
-        frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+        self._table_frame = ttk.Frame(self.root)
+        self._table_frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
 
         col_ids = [c[0] for c in COLUMNS]
 
-        self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12,
+        self._tree = CheckboxTreeview(self._table_frame, columns=col_ids, show="headings",
+                                       selectmode="none", height=12,
                                        on_toggle=self._update_check_header)
 
-        # 配置所有列
-        # title/time/cwd 自动拉伸填充剩余空间，provider/archived 固定宽度刚好容纳内容
+        # 配置所有列：title/time/cwd 拉伸，provider/archived 固定
         _stretch_cols = {"title", "time", "cwd"}
         for cid, header, width, anchor in COLUMNS:
             if cid == "check":
@@ -382,13 +387,71 @@ class CodexTransferApp:
         self._tree.heading("check", text="☐", anchor="center", command=_toggle_all)
 
         # Scrollbar
-        scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=self._tree.yview)
+        scrollbar = ttk.Scrollbar(self._table_frame, orient=VERTICAL, command=self._tree.yview)
         self._tree.configure(yscrollcommand=scrollbar.set)
         self._tree.pack(side=LEFT, fill=BOTH, expand=True)
         scrollbar.pack(side=RIGHT, fill=Y)
 
         # Double-click to copy title
         self._tree.bind("<Double-1>", self._on_double_click)
+
+        # 窗口大小变化时动态调整列宽
+        self._adjust_scheduled = False
+        self.root.bind("<Configure>", self._on_window_resize, add=True)
+
+    def _on_window_resize(self, event: tk.Event) -> None:
+        """窗口大小变化时重新计算列宽，避免重复调度。"""
+        if event.widget != self.root:
+            return
+        if self._adjust_scheduled:
+            return
+        self._adjust_scheduled = True
+        self.root.after(50, self._run_adjust_columns)
+
+    def _run_adjust_columns(self) -> None:
+        self._adjust_scheduled = False
+        self._adjust_column_widths()
+
+    def _adjust_column_widths(self) -> None:
+        """根据窗口宽度和内容动态分配列宽。
+        provider/archived 固定刚好容纳内容，剩余空间分给 title/time/cwd。
+        """
+        try:
+            self._table_frame.update_idletasks()
+            available = self._table_frame.winfo_width() - 24  # 减去边框/scrollbar
+        except Exception:
+            return
+        if available < 300:
+            return
+
+        import tkinter.font as tkfont
+        font = tkfont.nametofont("TkDefaultFont")
+        cw = max(font.measure("中"), 8)  # 中文字符宽度
+
+        # 归属列：根据实际内容计算
+        providers = sorted({t.model_provider for t in self._threads if t.model_provider})
+        max_prov = max((len(p) for p in providers), default=4)
+        provider_w = max(int(cw * max_prov) + 20, int(cw * 4) + 20)  # 内容或标题取大值
+
+        # 归档列：刚好容纳标题 "归档"
+        archived_w = int(cw * 2.5) + 20
+
+        check_w = 40
+        fixed_total = check_w + provider_w + archived_w
+        remaining = max(available - fixed_total, 200)
+
+        # title/time/cwd 按 5:2.5:2.5 比例分配剩余空间
+        total_ratio = 10.0
+        title_w = int(remaining * 5.0 / total_ratio)
+        time_w = int(remaining * 2.5 / total_ratio)
+        cwd_w = remaining - title_w - time_w
+
+        self._tree.column("check", width=check_w)
+        self._tree.column("title", width=title_w)
+        self._tree.column("time", width=time_w)
+        self._tree.column("cwd", width=cwd_w)
+        self._tree.column("provider", width=provider_w)
+        self._tree.column("archived", width=archived_w)
 
     # ------------------------------------------------------------------
     # Action bar
@@ -587,6 +650,7 @@ class CodexTransferApp:
 
         self._update_status()
         self._update_check_header()
+        self._adjust_column_widths()
 
     # ------------------------------------------------------------------
     # Sorting
