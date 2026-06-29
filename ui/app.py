@@ -362,8 +362,9 @@ class CodexTransferApp:
         frame.pack(fill=X)
 
         # 使用grid布局，设置列权重让组件能弹性伸缩
-        frame.columnconfigure(1, weight=1)  # 路径下拉框可伸缩
-        frame.columnconfigure(3, weight=1)  # 关键词输入框可伸缩
+        frame.columnconfigure(1, weight=0)  # Provider dropdown - fixed width
+        frame.columnconfigure(3, weight=1)  # CWD路径下拉框可伸缩
+        frame.columnconfigure(5, weight=1)  # 关键词输入框可伸缩
 
         # Provider dropdown
         ttk.Label(frame, text="归属:").grid(row=0, column=0, sticky=W, padx=(0, 2))
