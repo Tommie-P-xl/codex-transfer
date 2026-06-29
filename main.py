@@ -76,11 +76,12 @@ def main() -> None:
 
     root = ttk.Window(themename=theme_name)
 
-    # 根据系统 DPI 计算缩放因子，让 UI 在高分辨率屏幕上正确缩放
-    # tk scaling 返回每英寸的点数；96 为标准 100% DPI
+    # 根据系统 DPI 计算窗口尺寸缩放因子
+    # 注意：ttk 控件（字体、padding、行高等）由 tkinter 自动缩放，
+    # 只有像素单位的窗口尺寸需要手动调整
     try:
         tk_dpi = root.winfo_fpixels("1i")
-        dpi_scale = max(1.0, min(tk_dpi / 96.0, 2.5))
+        dpi_scale = max(1.0, min(tk_dpi / 96.0, 2.0))
     except Exception:
         dpi_scale = 1.0
     # 立即隐藏窗口，避免小窗口闪烁
