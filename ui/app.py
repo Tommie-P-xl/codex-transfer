@@ -256,12 +256,31 @@ class CodexTransferApp:
     def _setup_window(self) -> None:
         self.root.title(f"Codex Transfer v{APP_VERSION}")
 
-        # 始终按屏幕比例自适应（参考 1987×1261 / 3200×2000），不依赖配置文件
+        # DPI感知自适应：根据DPI缩放比例调整窗口尺寸
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        geo = f"{int(sw * 0.621)}x{int(sh * 0.631)}"
+        scale = get_dpi_scale()
+
+        # 基准尺寸（100% DPI下），确保在所有分辨率下都能完整显示
+        base_w, base_h = 900, 520
+        w = int(base_w * scale)
+        h = int(base_h * scale)
+
+        # 确保不超过屏幕尺寸的90%，留出边距
+        max_w = int(sw * 0.9)
+        max_h = int(sh * 0.9)
+        w = min(w, max_w)
+        h = min(h, max_h)
+
+        # 确保不小于最小尺寸
+        min_w = int(700 * scale)
+        min_h = int(450 * scale)
+        w = max(w, min_w)
+        h = max(h, min_h)
+
+        geo = f"{w}x{h}"
         self.root.geometry(geo)
-        self.root.minsize(500, 380)
+        self.root.minsize(min_w, min_h)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # 设置窗口图标
