@@ -1,4 +1,4 @@
-# Codex Transfer v1.1.0
+# Codex Transfer v1.2.0
 
 <p align="center">
   <img src="assets/icon.ico" width="128" alt="Codex Transfer Logo">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.1.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.2.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.10+-green" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
@@ -38,7 +38,7 @@ Codex Transfer 是一款专为 [OpenAI Codex](https://github.com/openai/codex) �
 | 🔄 **索引同步** | 加载数据时自动同步数据库线程到 `session_index.jsonl`，确保 Codex Desktop 显示所有记录 |
 | 🌙 **主题跟随** | 自动跟随 Windows 系统暗色/亮色主题 |
 | 🔒 **单实例** | 防止软件多开，重复启动时自动激活已有窗口 |
-| 🖥️ **DPI 自适应** | 在不同分辨率屏幕上正常显示 |
+| 🖥️ **DPI 自适应** | 自动检测系统 DPI 缩放比例，窗口、字体、表格列宽、间距等均按比例适配高分辨率屏幕（2.4K/4K 等） |
 | 🖼️ **清晰图标** | 内置多尺寸 ICO，标题栏、任务栏、Alt-Tab 等位置优先使用匹配尺寸 |
 | 📐 **轻量便携** | 单文件 exe，无需安装，约 6–9MB（Nuitka 编译） |
 
@@ -140,6 +140,7 @@ CodexTransfer/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.2.0 | 2026-06-29 | **高 DPI 适配修复**：修复在 2.4K/4K 等高分辨率屏幕上 UI 元素拥挤的问题。自动检测系统 DPI 缩放比例，窗口尺寸、字体大小、表格行高、列宽、组件间距等均按比例缩放，确保在不同分辨率屏幕上均有良好的显示效果 |
 | v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），编译为原生代码，体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译，功能零损失 |
 | v1.0.0 | 2026-06-07 | **修复复制功能**：复制线程后 Codex Desktop 无法显示的问题。根因：(1) `session_index.jsonl` 未同步新线程 ID；(2) 复制文件名格式不符合 Codex Desktop 预期。新增 `_sync_session_index()` 加载时自动补全索引 |
 | v1.0.0 | 2026-06-07 | 修复新归属弹窗自适应与闪烁，优化运行时图标清晰度，新增检查更新、残留会话过滤和 GitHub Actions 自动构建 |
@@ -178,7 +179,7 @@ Codex Transfer is a lightweight Windows desktop tool for [OpenAI Codex](https://
 - **Title Sync** — Prefer Codex sidebar titles from `session_index.jsonl` to avoid showing long first messages
 - **Theme Sync** — Auto-detect Windows dark/light theme
 - **Single Instance** — Prevent multiple windows, activate existing on re-launch
-- **DPI Aware** — Scales correctly on high-DPI displays
+- **DPI Aware** — Auto-detects system DPI scaling; window, fonts, table columns, and spacing scale proportionally on 2.4K/4K displays
 - **Crisp Icons** — Multi-size ICO for clearer title bar, taskbar, and Alt-Tab icons
 - **Portable** — Single exe, no installation, ~6–9MB (Nuitka build)
 

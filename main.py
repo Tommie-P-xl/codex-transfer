@@ -11,7 +11,7 @@ from pathlib import Path
 MUTEX_NAME = "CodexTransfer_SingleInstance"
 ERROR_ALREADY_EXISTS = 183
 APP_USER_MODEL_ID = "TommiePxl.CodexTransfer"
-APP_TITLE = "Codex Transfer v1.1.0"
+APP_TITLE = "Codex Transfer v1.2.0"
 
 
 def check_single_instance() -> bool:
@@ -55,6 +55,7 @@ def main() -> None:
     except Exception:
         pass
 
+    # DPI 自适应：在创建窗口前设置 DPI 感知，确保高分辨率屏幕正确渲染
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)  # Per-Monitor DPI Aware
     except Exception:
@@ -74,6 +75,14 @@ def main() -> None:
     theme_name = get_theme_name(config.theme)
 
     root = ttk.Window(themename=theme_name)
+
+    # 根据系统 DPI 计算缩放因子，让 UI 在高分辨率屏幕上正确缩放
+    # tk scaling 返回每英寸的点数；96 为标准 100% DPI
+    try:
+        tk_dpi = root.winfo_fpixels("1i")
+        dpi_scale = max(1.0, min(tk_dpi / 96.0, 2.5))
+    except Exception:
+        dpi_scale = 1.0
     # 立即隐藏窗口，避免小窗口闪烁
     root.withdraw()
 
@@ -81,7 +90,7 @@ def main() -> None:
     if icon_path.exists():
         root.iconbitmap(str(icon_path))
 
-    app = CodexTransferApp(root, config)
+    app = CodexTransferApp(root, config, dpi_scale=dpi_scale)
     root.mainloop()
 
 

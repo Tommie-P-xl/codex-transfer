@@ -23,7 +23,7 @@ from core.database import CodexDB, ThreadRecord, find_state_db
 from core.rollout import RolloutManager
 from ui.widgets import CheckboxTreeview
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 GITHUB_REPO = "Tommie-P-xl/codex-transfer"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
@@ -209,9 +209,10 @@ COLUMNS = [
 class CodexTransferApp:
     """Main application window that wires together all modules."""
 
-    def __init__(self, root: ttk.Window, config: Config) -> None:
+    def __init__(self, root: ttk.Window, config: Config, dpi_scale: float = 1.0) -> None:
         self.root = root
         self.config = config
+        self.dpi_scale = dpi_scale
         self.db: CodexDB | None = None
         self.rollout: RolloutManager | None = None
         self._threads: list[ThreadRecord] = []
@@ -236,17 +237,20 @@ class CodexTransferApp:
     # ------------------------------------------------------------------
     def _setup_window(self) -> None:
         self.root.title(f"Codex Transfer v{APP_VERSION}")
+        scale = self.dpi_scale
 
-        # 使用配置的尺寸，但如果太小则用默认值
+        # 使用配置的尺寸，但如果太小则用默认值；高 DPI 屏幕下按比例放大默认值
+        default_w = int(900 * scale)
+        default_h = int(520 * scale)
         geo = self.config.window_geometry
         try:
             w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
-            if int(w) < 900 or int(h) < 520:
-                geo = "900x520"
+            if int(w) < default_w or int(h) < default_h:
+                geo = f"{default_w}x{default_h}"
         except Exception:
-            geo = "900x520"
+            geo = f"{default_w}x{default_h}"
         self.root.geometry(geo)
-        self.root.minsize(600, 450)
+        self.root.minsize(int(600 * scale), int(450 * scale))
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # 设置窗口图标
@@ -255,17 +259,19 @@ class CodexTransferApp:
         # 让 Windows 标题栏跟随系统暗色/亮色主题
         _apply_titlebar_theme(self.root, self.config.theme)
 
-        # 配置全局字体 — Microsoft YaHei UI 更美观，字号 11
+        # 配置全局字体 — Microsoft YaHei UI 更美观，字号根据 DPI 缩放
         import tkinter.font as tkfont
+        scaled_font_size = max(11, int(11 * scale))
         for font_name in ("TkDefaultFont", "TkTextFont", "TkHeadingFont", "TkMenuFont", "TkTooltipFont"):
             try:
-                tkfont.nametofont(font_name).configure(family="Microsoft YaHei UI", size=11)
+                tkfont.nametofont(font_name).configure(family="Microsoft YaHei UI", size=scaled_font_size)
             except Exception:
                 pass
-        # Treeview 使用 style 设置字体
+        # Treeview 使用 style 设置字体，行高按 DPI 缩放
         style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=28)
-        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"))
+        scaled_row_height = max(28, int(28 * scale))
+        style.configure("Treeview", font=("Microsoft YaHei UI", scaled_font_size), rowheight=scaled_row_height)
+        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", scaled_font_size, "bold"))
 
     def _on_close(self) -> None:
         # Save current window geometry before closing
@@ -279,9 +285,10 @@ class CodexTransferApp:
     # Path bar
     # ------------------------------------------------------------------
     def _build_path_bar(self) -> None:
+        scale = self.dpi_scale
         lf = ttk.LabelFrame(self.root, text=" Codex 路径 ")
-        lf.pack(fill=X, padx=10, pady=(10, 5))
-        frame = ttk.Frame(lf, padding=8)
+        lf.pack(fill=X, padx=int(10 * scale), pady=(int(10 * scale), int(5 * scale)))
+        frame = ttk.Frame(lf, padding=int(8 * scale))
         frame.pack(fill=X)
 
         self._path_var = tk.StringVar(value=str(self.config.codex_home))
@@ -310,30 +317,31 @@ class CodexTransferApp:
     # Filter bar
     # ------------------------------------------------------------------
     def _build_filter_bar(self) -> None:
+        scale = self.dpi_scale
         lf = ttk.LabelFrame(self.root, text=" 筛选 ")
-        lf.pack(fill=X, padx=10, pady=5)
-        frame = ttk.Frame(lf, padding=8)
+        lf.pack(fill=X, padx=int(10 * scale), pady=int(5 * scale))
+        frame = ttk.Frame(lf, padding=int(8 * scale))
         frame.pack(fill=X)
 
         # Provider dropdown
         ttk.Label(frame, text="归属:").pack(side=LEFT, padx=(0, 2))
         self._provider_var = tk.StringVar()
-        self._provider_combo = ttk.Combobox(frame, textvariable=self._provider_var, state="readonly", width=14)
-        self._provider_combo.pack(side=LEFT, padx=(0, 10))
+        self._provider_combo = ttk.Combobox(frame, textvariable=self._provider_var, state="readonly", width=max(14, int(14 * scale)))
+        self._provider_combo.pack(side=LEFT, padx=(0, int(10 * scale)))
         self._provider_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # CWD dropdown
         ttk.Label(frame, text="路径:").pack(side=LEFT, padx=(0, 2))
         self._cwd_var = tk.StringVar()
-        self._cwd_combo = ttk.Combobox(frame, textvariable=self._cwd_var, state="readonly", width=30)
-        self._cwd_combo.pack(side=LEFT, padx=(0, 10))
+        self._cwd_combo = ttk.Combobox(frame, textvariable=self._cwd_var, state="readonly", width=max(30, int(30 * scale)))
+        self._cwd_combo.pack(side=LEFT, padx=(0, int(10 * scale)))
         self._cwd_combo.bind("<<ComboboxSelected>>", lambda _: self._apply_filters())
 
         # Keyword search
         ttk.Label(frame, text="关键词:").pack(side=LEFT, padx=(0, 2))
         self._keyword_var = tk.StringVar()
-        keyword_entry = ttk.Entry(frame, textvariable=self._keyword_var, width=20)
-        keyword_entry.pack(side=LEFT, padx=(0, 5))
+        keyword_entry = ttk.Entry(frame, textvariable=self._keyword_var, width=max(20, int(20 * scale)))
+        keyword_entry.pack(side=LEFT, padx=(0, int(5 * scale)))
         keyword_entry.bind("<Return>", lambda _: self._apply_filters())
 
         btn_search = ttk.Button(frame, text="🔍", command=self._apply_filters, bootstyle=SECONDARY, width=3)
@@ -343,18 +351,20 @@ class CodexTransferApp:
     # Main table
     # ------------------------------------------------------------------
     def _build_table(self) -> None:
+        scale = self.dpi_scale
         frame = ttk.Frame(self.root)
-        frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+        frame.pack(fill=BOTH, expand=True, padx=int(10 * scale), pady=int(5 * scale))
 
         col_ids = [c[0] for c in COLUMNS]
 
         self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12)
 
-        # 配置所有列
+        # 配置所有列，列宽根据 DPI 缩放
         for cid, header, width, anchor in COLUMNS:
+            scaled_width = max(40, int(width * scale))
             self._tree.heading(cid, text=header, anchor="center",
                                command=lambda c=cid: self._sort_by(c) if c != "check" else None)
-            self._tree.column(cid, width=width, minwidth=40, anchor=anchor, stretch=False)
+            self._tree.column(cid, width=scaled_width, minwidth=max(40, int(40 * scale)), anchor=anchor, stretch=False)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=self._tree.yview)
@@ -369,9 +379,10 @@ class CodexTransferApp:
     # Action bar
     # ------------------------------------------------------------------
     def _build_action_bar(self) -> None:
+        scale = self.dpi_scale
         lf = ttk.LabelFrame(self.root, text=" 操作 ")
-        lf.pack(fill=X, padx=10, pady=5)
-        frame = ttk.Frame(lf, padding=8)
+        lf.pack(fill=X, padx=int(10 * scale), pady=int(5 * scale))
+        frame = ttk.Frame(lf, padding=int(8 * scale))
         frame.pack(fill=X)
 
         # Selection buttons
@@ -383,7 +394,7 @@ class CodexTransferApp:
 
         # Move to existing provider
         self._move_exist_var = tk.StringVar()
-        self._move_exist_combo = ttk.Combobox(frame, textvariable=self._move_exist_var, state="readonly", width=14)
+        self._move_exist_combo = ttk.Combobox(frame, textvariable=self._move_exist_var, state="readonly", width=max(14, int(14 * scale)))
         self._move_exist_combo.pack(side=LEFT, padx=2)
         ttk.Button(frame, text="移动到已有归属", command=self._move_to_existing, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
 
@@ -394,7 +405,7 @@ class CodexTransferApp:
 
         # Copy to existing provider
         self._copy_exist_var = tk.StringVar()
-        self._copy_exist_combo = ttk.Combobox(frame, textvariable=self._copy_exist_var, state="readonly", width=14)
+        self._copy_exist_combo = ttk.Combobox(frame, textvariable=self._copy_exist_var, state="readonly", width=max(14, int(14 * scale)))
         self._copy_exist_combo.pack(side=LEFT, padx=2)
         ttk.Button(frame, text="复制到已有归属", command=self._copy_to_existing, bootstyle=SUCCESS).pack(side=LEFT, padx=2)
 
@@ -410,7 +421,8 @@ class CodexTransferApp:
     # Status bar
     # ------------------------------------------------------------------
     def _build_status_bar(self) -> None:
-        frame = ttk.Frame(self.root, padding=(10, 5))
+        scale = self.dpi_scale
+        frame = ttk.Frame(self.root, padding=(int(10 * scale), int(5 * scale)))
         frame.pack(fill=X, side=BOTTOM)
 
         self._status_var = tk.StringVar(value="就绪")
@@ -786,9 +798,9 @@ class CodexTransferApp:
         dialog.withdraw()
         dialog.title("新建归属")
         _set_icon(dialog)
-        scaling = max(float(self.root.tk.call("tk", "scaling")), 1.0)
-        width = min(max(int(360 * scaling), 350), max(self.root.winfo_screenwidth() - 80, 320))
-        height = min(max(int(150 * scaling), 150), max(self.root.winfo_screenheight() - 80, 145))
+        scale = self.dpi_scale
+        width = min(max(int(360 * scale), 350), max(self.root.winfo_screenwidth() - 80, 320))
+        height = min(max(int(150 * scale), 150), max(self.root.winfo_screenheight() - 80, 145))
         dialog.geometry(f"{width}x{height}")
         dialog.minsize(330, 145)
         dialog.resizable(True, False)
