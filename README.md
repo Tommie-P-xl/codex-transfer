@@ -1,4 +1,4 @@
-# Codex Transfer v1.3.0
+# Codex Transfer v1.2.0
 
 <p align="center">
   <img src="assets/icon.ico" width="128" alt="Codex Transfer Logo">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.2.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.10+-green" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
@@ -146,12 +146,9 @@ CodexTransfer/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
-| v1.3.0 | 2026-06-29 | **UI 全面优化**：窗口始终按屏幕比例（62.1%×63.1%）自适应，确保在不同分辨率屏幕上均能完整显示；动态列宽根据窗口大小自动调整，项目路径等长文本不再截断；所有列内容居中对齐，与标题栏保持一致；Treeview 显示列分隔线，提升数据可读性；表格行高增加，提升视觉舒适度；复选框标题栏支持动态勾选状态显示，实时反映选中数量 |
-| v1.2.0 | 2026-06-29 | **高 DPI 适配修复**：修复在 2.4K/4K 等高分辨率屏幕上 UI 元素拥挤的问题。自动检测系统 DPI 缩放比例，窗口尺寸、字体大小、表格行高、列宽、组件间距等均按比例缩放，确保在不同分辨率屏幕上均有良好的显示效果 |
-| v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），编译为原生代码，体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译，功能零损失 |
-| v1.0.0 | 2026-06-07 | **修复复制功能**：复制线程后 Codex Desktop 无法显示的问题。根因：(1) `session_index.jsonl` 未同步新线程 ID；(2) 复制文件名格式不符合 Codex Desktop 预期。新增 `_sync_session_index()` 加载时自动补全索引 |
-| v1.0.0 | 2026-06-07 | 修复新归属弹窗自适应与闪烁，优化运行时图标清晰度，新增检查更新、残留会话过滤和 GitHub Actions 自动构建 |
-| v1.0.0 | 2026-06-07 | 初始版本：浏览/筛选/移动/复制/删除，主题跟随，单实例，DPI 自适应 |
+| v1.2.0 | 2026-06-29 | **UI 全面优化**：修复高 DPI 屏幕 UI 拥挤问题；窗口按屏幕比例（62.1%×63.1%）自适应；动态列宽、内容居中对齐、列分隔线、行高增大、复选框动态勾选 |
+| v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译 |
+| v1.0.0 | 2026-06-07 | **初始版本**：浏览/筛选/移动/复制/删除，主题跟随，单实例，DPI 自适应；修复复制功能同步问题；新增检查更新、残留过滤、GitHub Actions 自动构建 |
 
 ## 📄 许可证
 
@@ -169,7 +166,7 @@ CodexTransfer/
 
 ## Overview
 
-Codex Transfer v1.3.0 is a lightweight Windows desktop tool for [OpenAI Codex](https://github.com/openai/codex) users. It reads the local Codex chat database, displays all session records in a sortable table, and supports batch migration, copying, and deletion.
+Codex Transfer is a lightweight Windows desktop tool for [OpenAI Codex](https://github.com/openai/codex) users. It reads the local Codex chat database, displays all session records in a sortable table, and supports batch migration, copying, and deletion.
 
 **Core Problem Solved:** When switching between multiple `model_provider` keys (e.g., openai → packycode → xychatai), older chat records become invisible in Codex due to provider key mismatch. Codex Transfer unifies these records under a single provider, restoring history visibility.
 
