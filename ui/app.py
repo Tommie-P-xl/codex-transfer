@@ -513,36 +513,33 @@ class CodexTransferApp:
             self._tree.invert_checked()
             self._update_check_header()
 
-        ttk.Button(frame, text="全选", command=_check_all_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="全不选", command=_uncheck_all_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="反选", command=_invert_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        # 使用grid布局，设置列权重让按钮能弹性伸缩
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
+        frame.columnconfigure(3, weight=1)
 
-        ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8)
+        # 第一行：选择按钮
+        ttk.Button(frame, text="全选", command=_check_all_and_sync, bootstyle=SECONDARY).grid(row=0, column=0, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="全不选", command=_uncheck_all_and_sync, bootstyle=SECONDARY).grid(row=0, column=1, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="反选", command=_invert_and_sync, bootstyle=SECONDARY).grid(row=0, column=2, sticky=EW, padx=2, pady=2)
 
-        # Move to existing provider
+        # 第二行：移动操作
         self._move_exist_var = tk.StringVar()
         self._move_exist_combo = ttk.Combobox(frame, textvariable=self._move_exist_var, state="readonly", width=14)
-        self._move_exist_combo.pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="移动到已有归属", command=self._move_to_existing, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
+        self._move_exist_combo.grid(row=1, column=0, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="移动到已有归属", command=self._move_to_existing, bootstyle=PRIMARY).grid(row=1, column=1, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="移动到新归属", command=self._move_to_new, bootstyle=PRIMARY).grid(row=1, column=2, sticky=EW, padx=2, pady=2)
 
-        # Move to new provider
-        ttk.Button(frame, text="移动到新归属", command=self._move_to_new, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
-
-        ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8)
-
-        # Copy to existing provider
+        # 第三行：复制操作
         self._copy_exist_var = tk.StringVar()
         self._copy_exist_combo = ttk.Combobox(frame, textvariable=self._copy_exist_var, state="readonly", width=14)
-        self._copy_exist_combo.pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="复制到已有归属", command=self._copy_to_existing, bootstyle=SUCCESS).pack(side=LEFT, padx=2)
+        self._copy_exist_combo.grid(row=2, column=0, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="复制到已有归属", command=self._copy_to_existing, bootstyle=SUCCESS).grid(row=2, column=1, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="复制到新归属", command=self._copy_to_new, bootstyle=SUCCESS).grid(row=2, column=2, sticky=EW, padx=2, pady=2)
 
-        # Copy to new provider
-        ttk.Button(frame, text="复制到新归属", command=self._copy_to_new, bootstyle=SUCCESS).pack(side=LEFT, padx=2)
-
-        ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8)
-
-        # Delete
-        ttk.Button(frame, text="删除选中", command=self._delete_selected, bootstyle=DANGER).pack(side=LEFT, padx=2)
+        # 第四行：删除
+        ttk.Button(frame, text="删除选中", command=self._delete_selected, bootstyle=DANGER).grid(row=3, column=0, columnspan=3, sticky=EW, padx=2, pady=2)
 
     # ------------------------------------------------------------------
     # Status bar
