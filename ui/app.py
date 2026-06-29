@@ -23,6 +23,24 @@ from core.database import CodexDB, ThreadRecord, find_state_db
 from core.rollout import RolloutManager
 from ui.widgets import CheckboxTreeview
 
+
+def get_dpi_scale() -> float:
+    """获取当前DPI缩放比例。
+
+    Returns:
+        float: DPI缩放比例，1.0 表示 100%，1.25 表示 125%，以此类推。
+               如果检测失败，返回 1.0。
+    """
+    try:
+        import ctypes
+        hdc = ctypes.windll.user32.GetDC(0)
+        dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)  # LOGPIXELSX
+        ctypes.windll.user32.ReleaseDC(0, hdc)
+        return dpi / 96.0  # 96 DPI = 100%
+    except Exception:
+        return 1.0
+
+
 APP_VERSION = "1.2.0"
 GITHUB_REPO = "Tommie-P-xl/codex-transfer"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
