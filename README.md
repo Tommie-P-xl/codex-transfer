@@ -1,4 +1,4 @@
-# Codex Transfer v1.2.0
+# Codex Transfer v1.3.0
 
 <p align="center">
   <img src="assets/icon.ico" width="128" alt="Codex Transfer Logo">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.2.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.10+-green" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
@@ -39,6 +39,12 @@ Codex Transfer 是一款专为 [OpenAI Codex](https://github.com/openai/codex) �
 | 🌙 **主题跟随** | 自动跟随 Windows 系统暗色/亮色主题 |
 | 🔒 **单实例** | 防止软件多开，重复启动时自动激活已有窗口 |
 | 🖥️ **DPI 自适应** | 自动检测系统 DPI 缩放比例，窗口、字体、表格列宽、间距等均按比例适配高分辨率屏幕（2.4K/4K 等） |
+| 📏 **屏幕比例自适应** | 窗口尺寸始终按屏幕比例（62.1%×63.1%）计算，确保在不同分辨率屏幕上均能完整显示 |
+| 📊 **动态列宽** | 表格列宽根据窗口大小动态调整，项目路径等长文本自动适应，避免截断 |
+| 📐 **内容居中对齐** | 所有列内容（包括标题、路径）均居中对齐，与标题栏保持一致 |
+| ➖ **列分隔线** | Treeview 显示列分隔线，提升数据可读性 |
+| ↕️ **行高增大** | 表格行高增加，提升视觉舒适度和操作便利性 |
+| ☑️ **动态勾选** | 复选框标题栏支持动态勾选状态显示，实时反映选中数量 |
 | 🖼️ **清晰图标** | 内置多尺寸 ICO，标题栏、任务栏、Alt-Tab 等位置优先使用匹配尺寸 |
 | 📐 **轻量便携** | 单文件 exe，无需安装，约 6–9MB（Nuitka 编译） |
 
@@ -140,6 +146,7 @@ CodexTransfer/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.3.0 | 2026-06-29 | **UI 全面优化**：窗口始终按屏幕比例（62.1%×63.1%）自适应，确保在不同分辨率屏幕上均能完整显示；动态列宽根据窗口大小自动调整，项目路径等长文本不再截断；所有列内容居中对齐，与标题栏保持一致；Treeview 显示列分隔线，提升数据可读性；表格行高增加，提升视觉舒适度；复选框标题栏支持动态勾选状态显示，实时反映选中数量 |
 | v1.2.0 | 2026-06-29 | **高 DPI 适配修复**：修复在 2.4K/4K 等高分辨率屏幕上 UI 元素拥挤的问题。自动检测系统 DPI 缩放比例，窗口尺寸、字体大小、表格行高、列宽、组件间距等均按比例缩放，确保在不同分辨率屏幕上均有良好的显示效果 |
 | v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），编译为原生代码，体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译，功能零损失 |
 | v1.0.0 | 2026-06-07 | **修复复制功能**：复制线程后 Codex Desktop 无法显示的问题。根因：(1) `session_index.jsonl` 未同步新线程 ID；(2) 复制文件名格式不符合 Codex Desktop 预期。新增 `_sync_session_index()` 加载时自动补全索引 |
@@ -162,7 +169,7 @@ CodexTransfer/
 
 ## Overview
 
-Codex Transfer is a lightweight Windows desktop tool for [OpenAI Codex](https://github.com/openai/codex) users. It reads the local Codex chat database, displays all session records in a sortable table, and supports batch migration, copying, and deletion.
+Codex Transfer v1.3.0 is a lightweight Windows desktop tool for [OpenAI Codex](https://github.com/openai/codex) users. It reads the local Codex chat database, displays all session records in a sortable table, and supports batch migration, copying, and deletion.
 
 **Core Problem Solved:** When switching between multiple `model_provider` keys (e.g., openai → packycode → xychatai), older chat records become invisible in Codex due to provider key mismatch. Codex Transfer unifies these records under a single provider, restoring history visibility.
 
@@ -180,6 +187,12 @@ Codex Transfer is a lightweight Windows desktop tool for [OpenAI Codex](https://
 - **Theme Sync** — Auto-detect Windows dark/light theme
 - **Single Instance** — Prevent multiple windows, activate existing on re-launch
 - **DPI Aware** — Auto-detects system DPI scaling; window, fonts, table columns, and spacing scale proportionally on 2.4K/4K displays
+- **Screen Ratio Adaptive** — Window size always calculated as screen ratio (62.1%×63.1%), ensuring complete display on different resolutions
+- **Dynamic Column Width** — Table columns automatically adjust based on window size, long texts like project paths are no longer truncated
+- **Center Aligned Content** — All column content (including titles and paths) is center-aligned, consistent with header alignment
+- **Column Separators** — Treeview displays column borders for better data readability
+- **Increased Row Height** — Table rows are taller for improved visual comfort and easier interaction
+- **Dynamic Checkbox** — Checkbox header shows dynamic selection state, reflecting the number of selected items in real-time
 - **Crisp Icons** — Multi-size ICO for clearer title bar, taskbar, and Alt-Tab icons
 - **Portable** — Single exe, no installation, ~6–9MB (Nuitka build)
 
