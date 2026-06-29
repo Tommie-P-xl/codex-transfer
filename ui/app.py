@@ -272,9 +272,11 @@ class CodexTransferApp:
         w = min(w, max_w)
         h = min(h, max_h)
 
-        # 确保不小于最小尺寸
+        # 确保不小于最小尺寸（但不超过屏幕上限）
         min_w = int(700 * scale)
         min_h = int(450 * scale)
+        min_w = min(min_w, max_w)
+        min_h = min(min_h, max_h)
         w = max(w, min_w)
         h = max(h, min_h)
 
