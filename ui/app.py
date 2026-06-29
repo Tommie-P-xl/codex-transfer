@@ -198,9 +198,9 @@ def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
 
 COLUMNS = [
     ("check", "☐", 40, "center"),
-    ("title", "标题", 200, "w"),
+    ("title", "标题", 200, "center"),
     ("time", "时间", 140, "center"),
-    ("cwd", "路径", 200, "w"),
+    ("cwd", "路径", 200, "center"),
     ("provider", "归属", 90, "center"),
     ("archived", "归档", 72, "center"),
 ]
@@ -238,16 +238,10 @@ class CodexTransferApp:
     def _setup_window(self) -> None:
         self.root.title(f"Codex Transfer v{APP_VERSION}")
 
-        # 使用配置的尺寸，太小则按屏幕比例计算默认值（参考 1987×1261 / 3200×2000）
-        geo = self.config.window_geometry
-        try:
-            w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
-            if int(w) < 660 or int(h) < 420:
-                raise ValueError
-        except Exception:
-            sw = self.root.winfo_screenwidth()
-            sh = self.root.winfo_screenheight()
-            geo = f"{int(sw * 0.621)}x{int(sh * 0.631)}"
+        # 始终按屏幕比例自适应（参考 1987×1261 / 3200×2000），不依赖配置文件
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        geo = f"{int(sw * 0.621)}x{int(sh * 0.631)}"
         self.root.geometry(geo)
         self.root.minsize(500, 380)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -266,10 +260,9 @@ class CodexTransferApp:
                 tkfont.nametofont(font_name).configure(family="Microsoft YaHei UI", size=11)
             except Exception:
                 pass
-        # Treeview 使用 style 设置字体、行高、列分隔线
+        # Treeview 使用 style 设置字体、行高
         style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=44,
-                         borderwidth=1, relief="solid")
+        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=44)
         style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"),
                          borderwidth=1, relief="solid")
 
@@ -365,6 +358,7 @@ class CodexTransferApp:
         self._tree = CheckboxTreeview(self._table_frame, columns=col_ids, show="headings",
                                        selectmode="none", height=12,
                                        on_toggle=self._update_check_header)
+        self._tree.columnborder = True
 
         # 配置所有列：title/time/cwd 拉伸，provider/archived 固定
         _stretch_cols = {"title", "time", "cwd"}
