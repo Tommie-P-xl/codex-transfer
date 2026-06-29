@@ -12,11 +12,13 @@ class CheckboxTreeview(ttk.Treeview):
 
     The first data column displays checkboxes (☐ / ☑). Clicking toggles the state.
     Supports select-all, deselect-all, invert-selection, and get checked items.
+    Optional ``on_toggle`` callback is invoked after each state change.
     """
 
-    def __init__(self, master: Any, **kwargs: Any) -> None:
+    def __init__(self, master: Any, on_toggle: Any = None, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
         self._checked: set[str] = set()
+        self._on_toggle = on_toggle
         self.bind("<Button-1>", self._on_click, add=True)
 
     def _on_click(self, event: tk.Event) -> None:
@@ -35,6 +37,8 @@ class CheckboxTreeview(ttk.Treeview):
         else:
             self._checked.add(item)
             self._update_item_display(item, checked=True)
+        if self._on_toggle:
+            self._on_toggle()
 
     def _update_item_display(self, item: str, checked: bool) -> None:
         values = list(self.item(item, "values"))

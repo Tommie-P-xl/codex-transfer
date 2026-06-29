@@ -198,11 +198,11 @@ def _apply_titlebar_theme(window: tk.Tk, theme_pref: str) -> None:
 
 COLUMNS = [
     ("check", "☐", 40, "center"),
-    ("title", "标题", 260, "w"),
-    ("time", "时间", 130, "center"),
-    ("cwd", "路径", 280, "w"),
-    ("provider", "归属", 120, "center"),
-    ("archived", "归档", 54, "center"),
+    ("title", "标题", 200, "w"),
+    ("time", "时间", 140, "center"),
+    ("cwd", "路径", 200, "w"),
+    ("provider", "归属", 80, "center"),
+    ("archived", "归档", 56, "center"),
 ]
 
 
@@ -241,12 +241,12 @@ class CodexTransferApp:
         geo = self.config.window_geometry
         try:
             w, h = geo.split("x")[0], geo.split("x")[1].split("+")[0]
-            if int(w) < 900 or int(h) < 520:
-                geo = "900x520"
+            if int(w) < 660 or int(h) < 420:
+                geo = "660x420"
         except Exception:
-            geo = "900x520"
+            geo = "660x420"
         self.root.geometry(geo)
-        self.root.minsize(600, 450)
+        self.root.minsize(500, 380)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # 设置窗口图标
@@ -265,7 +265,7 @@ class CodexTransferApp:
                 pass
         # Treeview 使用 style 设置字体
         style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=32)
+        style.configure("Treeview", font=("Microsoft YaHei UI", 11), rowheight=36)
         style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 11, "bold"))
 
     def _on_close(self) -> None:
@@ -275,6 +275,14 @@ class CodexTransferApp:
         if self.db:
             self.db.close()
         self.root.destroy()
+
+    def _update_check_header(self) -> None:
+        """同步左上角复选框标题栏的勾选状态显示。"""
+        children = self._tree.get_children()
+        if children and len(self._tree.get_checked_ids()) == len(children):
+            self._tree.heading("check", text="☑")
+        else:
+            self._tree.heading("check", text="☐")
 
     # ------------------------------------------------------------------
     # Path bar
@@ -349,9 +357,12 @@ class CodexTransferApp:
 
         col_ids = [c[0] for c in COLUMNS]
 
-        self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12)
+        self._tree = CheckboxTreeview(frame, columns=col_ids, show="headings", selectmode="none", height=12,
+                                       on_toggle=self._update_check_header)
 
-        # 配置所有列，最后一列自动填充剩余空间
+        # 配置所有列
+        # title/time/cwd 自动拉伸填充剩余空间，provider/archived 固定宽度刚好容纳内容
+        _stretch_cols = {"title", "time", "cwd"}
         for cid, header, width, anchor in COLUMNS:
             if cid == "check":
                 self._tree.heading(cid, text=header, anchor="center")
@@ -359,14 +370,15 @@ class CodexTransferApp:
                 self._tree.heading(cid, text=header, anchor="center",
                                    command=lambda c=cid: self._sort_by(c))
             self._tree.column(cid, width=width, minwidth=40, anchor=anchor,
-                              stretch=(cid == "archived"))
+                              stretch=(cid in _stretch_cols))
 
-        # 点击左上角复选框标题栏：全选/全不选切换
+        # 点击左上角复选框标题栏：全选/全不选切换，标题栏同步显示勾选状态
         def _toggle_all() -> None:
             if self._tree.get_children() and len(self._tree.get_checked_ids()) == len(self._tree.get_children()):
                 self._tree.uncheck_all()
             else:
                 self._tree.check_all()
+            self._update_check_header()
         self._tree.heading("check", text="☐", anchor="center", command=_toggle_all)
 
         # Scrollbar
@@ -387,10 +399,22 @@ class CodexTransferApp:
         frame = ttk.Frame(lf, padding=8)
         frame.pack(fill=X)
 
-        # Selection buttons
-        ttk.Button(frame, text="全选", command=self._tree.check_all, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="全不选", command=self._tree.uncheck_all, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
-        ttk.Button(frame, text="反选", command=self._tree.invert_checked, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        # Selection buttons — 操作后同步复选框标题栏状态
+        def _check_all_and_sync() -> None:
+            self._tree.check_all()
+            self._update_check_header()
+
+        def _uncheck_all_and_sync() -> None:
+            self._tree.uncheck_all()
+            self._update_check_header()
+
+        def _invert_and_sync() -> None:
+            self._tree.invert_checked()
+            self._update_check_header()
+
+        ttk.Button(frame, text="全选", command=_check_all_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        ttk.Button(frame, text="全不选", command=_uncheck_all_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        ttk.Button(frame, text="反选", command=_invert_and_sync, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
 
         ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8)
 
@@ -562,6 +586,7 @@ class CodexTransferApp:
             ))
 
         self._update_status()
+        self._update_check_header()
 
     # ------------------------------------------------------------------
     # Sorting
