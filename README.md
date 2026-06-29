@@ -1,4 +1,4 @@
-# Codex Transfer v1.2.0
+# Codex Transfer v1.3.0
 
 <p align="center">
   <img src="assets/icon.ico" width="128" alt="Codex Transfer Logo">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.2.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.10+-green" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
@@ -38,8 +38,8 @@ Codex Transfer 是一款专为 [OpenAI Codex](https://github.com/openai/codex) �
 | 🔄 **索引同步** | 加载数据时自动同步数据库线程到 `session_index.jsonl`，确保 Codex Desktop 显示所有记录 |
 | 🌙 **主题跟随** | 自动跟随 Windows 系统暗色/亮色主题 |
 | 🔒 **单实例** | 防止软件多开，重复启动时自动激活已有窗口 |
-| 🖥️ **DPI 自适应** | 自动检测系统 DPI 缩放比例，窗口、字体、表格列宽、间距等均按比例适配高分辨率屏幕（2.4K/4K 等） |
-| 📏 **屏幕比例自适应** | 窗口尺寸始终按屏幕比例（62.1%×63.1%）计算，确保在不同分辨率屏幕上均能完整显示 |
+| 🖥️ **DPI 感知自适应** | 自动检测系统 DPI 缩放比例（100%–200%），窗口尺寸根据 DPI 智能调整，支持任意分辨率（1366×768 到 3840×2160） |
+| 📏 **弹性布局** | 筛选栏和操作栏使用 grid 布局，组件能根据窗口大小自动伸缩，小屏幕下不溢出 |
 | 📊 **动态列宽** | 表格列宽根据窗口大小动态调整，项目路径等长文本自动适应，避免截断 |
 | 📐 **内容居中对齐** | 所有列内容（包括标题、路径）均居中对齐，与标题栏保持一致 |
 | ➖ **列分隔线** | Treeview 显示列分隔线，提升数据可读性 |
@@ -146,6 +146,7 @@ CodexTransfer/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.3.0 | 2026-06-29 | **DPI 感知自适应**：修复窗口在不同分辨率下显示不全的问题；支持任意分辨率（1366×768 到 3840×2160）和 DPI 缩放（100%–200%）；筛选栏和操作栏改用弹性 grid 布局 |
 | v1.2.0 | 2026-06-29 | **UI 全面优化**：修复高 DPI 屏幕 UI 拥挤问题；窗口按屏幕比例（62.1%×63.1%）自适应；动态列宽、内容居中对齐、列分隔线、行高增大、复选框动态勾选 |
 | v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译 |
 | v1.0.0 | 2026-06-07 | **初始版本**：浏览/筛选/移动/复制/删除，主题跟随，单实例，DPI 自适应；修复复制功能同步问题；新增检查更新、残留过滤、GitHub Actions 自动构建 |
