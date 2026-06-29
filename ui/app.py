@@ -41,7 +41,7 @@ def get_dpi_scale() -> float:
         return 1.0
 
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.4.0"
 GITHUB_REPO = "Tommie-P-xl/codex-transfer"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
@@ -262,7 +262,7 @@ class CodexTransferApp:
         scale = get_dpi_scale()
 
         # 基准尺寸（100% DPI下），确保在所有分辨率下都能完整显示
-        base_w, base_h = 900, 520
+        base_w, base_h = 960, 620
         w = int(base_w * scale)
         h = int(base_h * scale)
 
@@ -273,8 +273,8 @@ class CodexTransferApp:
         h = min(h, max_h)
 
         # 确保不小于最小尺寸（但不超过屏幕上限）
-        min_w = int(700 * scale)
-        min_h = int(450 * scale)
+        min_w = int(760 * scale)
+        min_h = int(500 * scale)
         min_w = min(min_w, max_w)
         min_h = min(min_h, max_h)
         w = max(w, min_w)
@@ -497,7 +497,7 @@ class CodexTransferApp:
     def _build_action_bar(self) -> None:
         lf = ttk.LabelFrame(self.root, text=" 操作 ")
         lf.pack(fill=X, padx=10, pady=5)
-        frame = ttk.Frame(lf, padding=8)
+        frame = ttk.Frame(lf, padding=(8, 6))
         frame.pack(fill=X)
 
         # Selection buttons — 操作后同步复选框标题栏状态
@@ -513,33 +513,24 @@ class CodexTransferApp:
             self._tree.invert_checked()
             self._update_check_header()
 
-        # 使用grid布局，设置列权重让按钮能弹性伸缩
-        frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
-        frame.columnconfigure(2, weight=1)
-        frame.columnconfigure(3, weight=1)
+        # 单行紧凑布局：选择 | 归属+移动+复制 | 删除
+        ttk.Button(frame, text="全选", command=_check_all_and_sync, bootstyle=SECONDARY, width=6).pack(side=LEFT, padx=2)
+        ttk.Button(frame, text="全不选", command=_uncheck_all_and_sync, bootstyle=SECONDARY, width=6).pack(side=LEFT, padx=2)
+        ttk.Button(frame, text="反选", command=_invert_and_sync, bootstyle=SECONDARY, width=6).pack(side=LEFT, padx=2)
 
-        # 第一行：选择按钮
-        ttk.Button(frame, text="全选", command=_check_all_and_sync, bootstyle=SECONDARY).grid(row=0, column=0, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="全不选", command=_uncheck_all_and_sync, bootstyle=SECONDARY).grid(row=0, column=1, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="反选", command=_invert_and_sync, bootstyle=SECONDARY).grid(row=0, column=2, sticky=EW, padx=2, pady=2)
+        ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8, pady=2)
 
-        # 第二行：移动操作
-        self._move_exist_var = tk.StringVar()
-        self._move_exist_combo = ttk.Combobox(frame, textvariable=self._move_exist_var, state="readonly", width=14)
-        self._move_exist_combo.grid(row=1, column=0, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="移动到已有归属", command=self._move_to_existing, bootstyle=PRIMARY).grid(row=1, column=1, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="移动到新归属", command=self._move_to_new, bootstyle=PRIMARY).grid(row=1, column=2, sticky=EW, padx=2, pady=2)
+        ttk.Label(frame, text="归属:").pack(side=LEFT, padx=(0, 2))
+        self._target_var = tk.StringVar()
+        self._target_combo = ttk.Combobox(frame, textvariable=self._target_var, state="readonly", width=16)
+        self._target_combo.pack(side=LEFT, padx=(0, 6))
 
-        # 第三行：复制操作
-        self._copy_exist_var = tk.StringVar()
-        self._copy_exist_combo = ttk.Combobox(frame, textvariable=self._copy_exist_var, state="readonly", width=14)
-        self._copy_exist_combo.grid(row=2, column=0, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="复制到已有归属", command=self._copy_to_existing, bootstyle=SUCCESS).grid(row=2, column=1, sticky=EW, padx=2, pady=2)
-        ttk.Button(frame, text="复制到新归属", command=self._copy_to_new, bootstyle=SUCCESS).grid(row=2, column=2, sticky=EW, padx=2, pady=2)
+        ttk.Button(frame, text="移动", command=self._move_selected, bootstyle=PRIMARY, width=6).pack(side=LEFT, padx=2)
+        ttk.Button(frame, text="复制", command=self._copy_selected, bootstyle=SUCCESS, width=6).pack(side=LEFT, padx=2)
 
-        # 第四行：删除
-        ttk.Button(frame, text="删除选中", command=self._delete_selected, bootstyle=DANGER).grid(row=3, column=0, columnspan=3, sticky=EW, padx=2, pady=2)
+        ttk.Separator(frame, orient=VERTICAL).pack(side=LEFT, fill=Y, padx=8, pady=2)
+
+        ttk.Button(frame, text="删除", command=self._delete_selected, bootstyle=DANGER, width=6).pack(side=LEFT, padx=2)
 
     # ------------------------------------------------------------------
     # Status bar
@@ -596,12 +587,13 @@ class CodexTransferApp:
         self._cwd_combo["values"] = ["(全部)"] + cwds_clean
         self._cwd_var.set("(全部)")
 
-        # Populate action bar dropdowns
-        self._move_exist_combo["values"] = providers
-        self._copy_exist_combo["values"] = providers
+        # Populate action bar target dropdown
+        target_values = providers + ["(新建...)"]
+        self._target_combo["values"] = target_values
         if providers:
-            self._move_exist_var.set(providers[0])
-            self._copy_exist_var.set(providers[0])
+            self._target_var.set(providers[0])
+        elif target_values:
+            self._target_var.set(target_values[0])
 
         self._apply_filters()
 
@@ -753,36 +745,40 @@ class CodexTransferApp:
         self._show_toast("检查更新失败")
 
     # ------------------------------------------------------------------
-    # Move to existing provider
+    # Unified move / copy — 目标由 _target_combo 选择，"(新建...)" 触发对话框
     # ------------------------------------------------------------------
-    def _move_to_existing(self) -> None:
+    def _resolve_target_provider(self) -> str | None:
+        """从操作栏 combobox 解析目标归属。返回 None 表示取消。"""
+        target = self._target_var.get()
+        if target == "(新建...)":
+            return self._ask_provider_name()
+        if not target:
+            self._show_toast("请先选择目标归属")
+            return None
+        return target
+
+    def _move_selected(self) -> None:
         if self.db is None or self.rollout is None:
             return
         checked_ids = self._tree.get_checked_ids()
         if not checked_ids:
             self._show_toast("请先勾选要操作的记录")
             return
-        new_provider = self._move_exist_var.get()
+
+        new_provider = self._resolve_target_provider()
         if not new_provider:
-            self._show_toast("请先选择目标归属")
             return
 
-        # Gather rollout paths for the checked threads
         id_to_thread = {t.id: t for t in self._threads}
         rollout_paths = [id_to_thread[tid].rollout_path for tid in checked_ids if tid in id_to_thread]
 
-        # Update JSONL files
         self.rollout.rewrite_providers(rollout_paths, new_provider)
-        # Update SQLite records
         self.db.update_provider_batch(checked_ids, new_provider)
 
         self._show_toast(f"已移动 {len(checked_ids)} 条记录到归属 \"{new_provider}\"")
         self._load_data()
 
-    # ------------------------------------------------------------------
-    # Move to new provider
-    # ------------------------------------------------------------------
-    def _move_to_new(self) -> None:
+    def _copy_selected(self) -> None:
         if self.db is None or self.rollout is None:
             return
         checked_ids = self._tree.get_checked_ids()
@@ -790,37 +786,8 @@ class CodexTransferApp:
             self._show_toast("请先勾选要操作的记录")
             return
 
-        new_name = self._ask_provider_name()
-        if not new_name:
-            return
-
-        existing = self.db.get_distinct_providers()
-        if new_name in existing:
-            messagebox.showwarning("归属已存在", f"归属 \"{new_name}\" 已存在，请使用\"移动到已有归属\"功能。")
-            return
-
-        id_to_thread = {t.id: t for t in self._threads}
-        rollout_paths = [id_to_thread[tid].rollout_path for tid in checked_ids if tid in id_to_thread]
-
-        self.rollout.rewrite_providers(rollout_paths, new_name)
-        self.db.update_provider_batch(checked_ids, new_name)
-
-        self._show_toast(f"已移动 {len(checked_ids)} 条记录到新归属 \"{new_name}\"")
-        self._load_data()
-
-    # ------------------------------------------------------------------
-    # Copy to existing provider
-    # ------------------------------------------------------------------
-    def _copy_to_existing(self) -> None:
-        if self.db is None or self.rollout is None:
-            return
-        checked_ids = self._tree.get_checked_ids()
-        if not checked_ids:
-            self._show_toast("请先勾选要操作的记录")
-            return
-        new_provider = self._copy_exist_var.get()
+        new_provider = self._resolve_target_provider()
         if not new_provider:
-            self._show_toast("请先选择目标归属")
             return
 
         id_to_thread = {t.id: t for t in self._threads}
@@ -844,49 +811,6 @@ class CodexTransferApp:
             count += 1
 
         self._show_toast(f"已复制 {count} 条记录到归属 \"{new_provider}\"")
-        self._load_data()
-
-    # ------------------------------------------------------------------
-    # Copy to new provider
-    # ------------------------------------------------------------------
-    def _copy_to_new(self) -> None:
-        if self.db is None or self.rollout is None:
-            return
-        checked_ids = self._tree.get_checked_ids()
-        if not checked_ids:
-            self._show_toast("请先勾选要操作的记录")
-            return
-
-        new_name = self._ask_provider_name()
-        if not new_name:
-            return
-
-        existing = self.db.get_distinct_providers()
-        if new_name in existing:
-            messagebox.showwarning("归属已存在", f"归属 \"{new_name}\" 已存在，请使用\"复制到已有归属\"功能。")
-            return
-
-        id_to_thread = {t.id: t for t in self._threads}
-        count = 0
-        for tid in checked_ids:
-            t = id_to_thread[tid]
-            if t is None:
-                continue
-            dst_path, new_id = self.rollout.copy_rollout(t.rollout_path, new_name)
-            title = self._display_title(t)
-            self.db.insert_thread(
-                thread_id=new_id,
-                rollout_path=dst_path,
-                created_at=t.created_at,
-                updated_at=t.updated_at,
-                model_provider=new_name,
-                cwd=t.cwd,
-                title=title,
-            )
-            _append_session_index(self.config.codex_home, new_id, title)
-            count += 1
-
-        self._show_toast(f"已复制 {count} 条记录到新归属 \"{new_name}\"")
         self._load_data()
 
     # ------------------------------------------------------------------

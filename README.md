@@ -1,169 +1,25 @@
-# Codex Transfer v1.3.0
+# Codex Transfer
 
 <p align="center">
   <img src="assets/icon.ico" width="128" alt="Codex Transfer Logo">
 </p>
 
 <p align="center">
-  <strong>轻量级 Windows 桌面应用，用于管理 Codex 聊天历史记录</strong>
+  <strong>Lightweight Windows desktop tool for managing Codex chat history</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3.0-blue" alt="Version">
+  English | <a href="README_CN.md">中文</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-v1.4.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.10+-green" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
 </p>
 
 ---
-
-## 📖 项目简介
-
-Codex Transfer 是一款专为 [OpenAI Codex](https://github.com/openai/codex) 用户设计的 Windows 桌面工具。它可以读取 Codex 的本地聊天数据库，以列表形式展示所有会话记录，并支持批量迁移、复制和删除操作。
-
-**解决的核心问题：** 当你更换过多个 model_provider（如 openai → packycode → xychatai）后，旧的聊天记录会因为 provider key 不匹配而无法在 Codex 中正常显示。Codex Transfer 可以将这些记录统一迁移到同一个 provider 下，让历史记录重新可见。
-
-## ✨ 功能特性
-
-| 功能 | 说明 |
-|------|------|
-| 📋 **浏览记录** | 以列表形式展示所有 Codex 聊天记录（优先使用 Codex 侧边栏标题、时间、项目路径、归属） |
-| 🔍 **多维筛选** | 按归属（model_provider）、项目路径、标题关键字筛选 |
-| 📦 **批量移动** | 将选中记录的归属迁移到已有或新建的 provider |
-| 📋 **批量复制** | 将选中记录复制到已有或新建的 provider（创建新文件+新记录），自动同步 `session_index.jsonl` 确保 Codex Desktop 可见 |
-| 🗑️ **批量删除** | 同时删除选中记录的 JSONL 文件和数据库记录 |
-| 🔄 **检查更新** | 从 GitHub Releases 检查最新版本并打开下载页面 |
-| 🧹 **残留过滤** | 自动隐藏数据库中仍存在但 JSONL 文件已删除的会话记录 |
-| 🏷️ **标题同步** | 优先读取 `session_index.jsonl` 中的会话标题，避免显示第一条长消息 |
-| 🔄 **索引同步** | 加载数据时自动同步数据库线程到 `session_index.jsonl`，确保 Codex Desktop 显示所有记录 |
-| 🌙 **主题跟随** | 自动跟随 Windows 系统暗色/亮色主题 |
-| 🔒 **单实例** | 防止软件多开，重复启动时自动激活已有窗口 |
-| 🖥️ **DPI 感知自适应** | 自动检测系统 DPI 缩放比例（100%–200%），窗口尺寸根据 DPI 智能调整，支持任意分辨率（1366×768 到 3840×2160） |
-| 📏 **弹性布局** | 筛选栏和操作栏使用 grid 布局，组件能根据窗口大小自动伸缩，小屏幕下不溢出 |
-| 📊 **动态列宽** | 表格列宽根据窗口大小动态调整，项目路径等长文本自动适应，避免截断 |
-| 📐 **内容居中对齐** | 所有列内容（包括标题、路径）均居中对齐，与标题栏保持一致 |
-| ➖ **列分隔线** | Treeview 显示列分隔线，提升数据可读性 |
-| ↕️ **行高增大** | 表格行高增加，提升视觉舒适度和操作便利性 |
-| ☑️ **动态勾选** | 复选框标题栏支持动态勾选状态显示，实时反映选中数量 |
-| 🖼️ **清晰图标** | 内置多尺寸 ICO，标题栏、任务栏、Alt-Tab 等位置优先使用匹配尺寸 |
-| 📐 **轻量便携** | 单文件 exe，无需安装，约 6–9MB（Nuitka 编译） |
-
-## 🚀 快速开始
-
-### 方式一：直接运行 exe（推荐）
-
-1. 从 [Releases](https://github.com/Tommie-P-xl/codex-transfer/releases) 下载 `CodexTransfer.exe`
-2. 双击运行，无需安装
-
-### 方式二：从源码运行
-
-```bash
-# 克隆仓库
-git clone https://github.com/Tommie-P-xl/codex-transfer.git
-cd codex-transfer
-
-# 安装依赖
-pip install ttkbootstrap Pillow
-
-# 运行
-python main.py
-```
-
-### 方式三：自行构建 exe
-
-```bash
-# 安装所有依赖（含打包工具）
-pip install -r requirements.txt
-
-# 构建
-python build.py
-
-# 生成的 exe 位于 dist/CodexTransfer.exe
-```
-
-### GitHub Actions 自动构建
-
-仓库内置 `.github/workflows/build-release.yml`：
-
-- 推送 `v*` 标签时自动在 `windows-latest` 上构建 `CodexTransfer.exe`
-- 构建产物会上传为 Actions artifact
-- 标签构建会自动把 `dist/CodexTransfer.exe` 附加到对应 GitHub Release
-- 也可以在 GitHub Actions 页面通过 `workflow_dispatch` 手动运行构建
-
-## ⚙️ 配置说明
-
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| Codex 路径 | `~/.codex` | 可通过 UI 更改，持久化在 `%APPDATA%/CodexTransfer/config.json` |
-| 主题 | `auto` | `auto` 跟随系统 / `dark` 暗色 / `light` 亮色 |
-| 窗口尺寸 | `900x520` | 自动保存关闭时的窗口大小 |
-
-### Codex 数据目录结构
-
-```
-~/.codex/
-├── state_*.sqlite          # 会话元数据（threads 表）
-├── sessions/               # 会话内容（JSONL 文件）
-│   └── YYYY/MM/DD/
-│       └── rollout-*.jsonl
-└── archived_sessions/      # 已归档会话
-```
-
-## 🏗️ 项目结构
-
-```
-CodexTransfer/
-├── main.py                 # 入口：单实例检测 + DPI 设置 + 启动 UI
-├── core/
-│   ├── config.py           # 配置管理（%APPDATA% 持久化）
-│   ├── database.py         # SQLite 读写（threads 表 CRUD）
-│   └── rollout.py          # JSONL 文件操作（改写/复制/删除）
-├── ui/
-│   ├── app.py              # 主窗口（筛选/列表/操作/状态栏）
-│   ├── theme.py            # Windows 主题检测（注册表读取）
-│   └── widgets.py          # 自定义组件（CheckboxTreeview）
-├── assets/
-│   └── icon.ico            # 应用图标（16/20/24/32/40/48/64/128/256 多尺寸）
-├── .github/workflows/
-│   └── build-release.yml   # GitHub Actions 自动构建和发布
-├── build.py                # Nuitka 打包脚本
-├── requirements.txt        # 依赖清单
-└── README.md               # 本文档
-```
-
-## 🔧 技术栈
-
-| 组件 | 技术 |
-|------|------|
-| 语言 | Python 3.10+ |
-| UI 框架 | tkinter + ttkbootstrap |
-| 数据库 | sqlite3（内置） |
-| 图标处理 | Pillow |
-| 打包 | Nuitka（编译为原生代码，体积更小、启动更快、不可反编译） |
-| 系统 API | ctypes（Windows DWM / DPI / Mutex） |
-
-## 📝 版本历史
-
-| 版本 | 日期 | 说明 |
-|------|------|------|
-| v1.3.0 | 2026-06-29 | **DPI 感知自适应**：修复窗口在不同分辨率下显示不全的问题；支持任意分辨率（1366×768 到 3840×2160）和 DPI 缩放（100%–200%）；筛选栏和操作栏改用弹性 grid 布局 |
-| v1.2.0 | 2026-06-29 | **UI 全面优化**：修复高 DPI 屏幕 UI 拥挤问题；窗口按屏幕比例（62.1%×63.1%）自适应；动态列宽、内容居中对齐、列分隔线、行高增大、复选框动态勾选 |
-| v1.1.0 | 2026-06-09 | **EXE 体积优化**：换用 Nuitka 编译（替代 PyInstaller），体积从 ~32MB 降至 ~6–9MB，启动更快，不可反编译 |
-| v1.0.0 | 2026-06-07 | **初始版本**：浏览/筛选/移动/复制/删除，主题跟随，单实例，DPI 自适应；修复复制功能同步问题；新增检查更新、残留过滤、GitHub Actions 自动构建 |
-
-## 📄 许可证
-
-本项目基于 [MIT License](LICENSE) 开源。
-
-## 🙏 致谢
-
-- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap) — 现代 tkinter 主题
-- [PyInstaller](https://pyinstaller.org/) — Python 打包工具
-- [OpenAI Codex](https://github.com/openai/codex) — 本工具的管理对象
-
----
-
-# English Version
 
 ## Overview
 
@@ -173,32 +29,34 @@ Codex Transfer is a lightweight Windows desktop tool for [OpenAI Codex](https://
 
 ## Features
 
-- **Browse** — View all Codex chats with title, timestamp, project path, and provider
-- **Filter** — Filter by provider, project path, or title keyword
-- **Batch Move** — Migrate selected records to an existing or new provider
-- **Batch Copy** — Copy selected records (new JSONL files + new DB records), auto-sync `session_index.jsonl` for Codex Desktop compatibility
-- **Index Sync** — Auto-sync database threads to `session_index.jsonl` on load, ensuring all records visible in Codex Desktop
-- **Batch Delete** — Remove selected records (files + database)
-- **Check Updates** — Check GitHub Releases and open the latest download page
-- **Stale Record Filtering** — Hide database rows whose JSONL rollout files no longer exist
-- **Title Sync** — Prefer Codex sidebar titles from `session_index.jsonl` to avoid showing long first messages
-- **Theme Sync** — Auto-detect Windows dark/light theme
-- **Single Instance** — Prevent multiple windows, activate existing on re-launch
-- **DPI Aware** — Auto-detects system DPI scaling; window, fonts, table columns, and spacing scale proportionally on 2.4K/4K displays
-- **Screen Ratio Adaptive** — Window size always calculated as screen ratio (62.1%×63.1%), ensuring complete display on different resolutions
-- **Dynamic Column Width** — Table columns automatically adjust based on window size, long texts like project paths are no longer truncated
-- **Center Aligned Content** — All column content (including titles and paths) is center-aligned, consistent with header alignment
-- **Column Separators** — Treeview displays column borders for better data readability
-- **Increased Row Height** — Table rows are taller for improved visual comfort and easier interaction
-- **Dynamic Checkbox** — Checkbox header shows dynamic selection state, reflecting the number of selected items in real-time
-- **Crisp Icons** — Multi-size ICO for clearer title bar, taskbar, and Alt-Tab icons
-- **Portable** — Single exe, no installation, ~6–9MB (Nuitka build)
+| Feature | Description |
+|---------|-------------|
+| 📋 **Browse** | View all Codex chats with title, timestamp, project path, and provider |
+| 🔍 **Multi-filter** | Filter by provider, project path, or title keyword |
+| 📦 **Batch Move** | Migrate selected records to an existing or new provider |
+| 📋 **Batch Copy** | Copy selected records with auto-sync to `session_index.jsonl` |
+| 🗑️ **Batch Delete** | Remove selected records (files + database) |
+| 🔄 **Check Updates** | Check GitHub Releases and open the latest download page |
+| 🧹 **Stale Filtering** | Hide database rows whose JSONL files no longer exist |
+| 🏷️ **Title Sync** | Prefer Codex sidebar titles from `session_index.jsonl` |
+| 🌙 **Theme Sync** | Auto-detect Windows dark/light theme |
+| 🔒 **Single Instance** | Prevent multiple windows, activate existing on re-launch |
+| 🖥️ **DPI Aware** | Auto-detect DPI scaling (100%–200%), supports any resolution from 1366×768 to 3840×2160 |
+| 📏 **Responsive Layout** | Filter bar and action bar use grid layout, components stretch automatically |
+| 📊 **Dynamic Columns** | Table columns adjust based on window size |
+| 📐 **Center Aligned** | All column content is center-aligned |
+| ☑️ **Dynamic Checkbox** | Checkbox header reflects selection state in real-time |
+| 📐 **Portable** | Single exe, no installation, ~6–9MB (Nuitka build) |
 
 ## Quick Start
 
-**Download exe:** Get `CodexTransfer.exe` from [Releases](https://github.com/Tommie-P-xl/codex-transfer/releases) and double-click.
+### Option 1: Download exe (Recommended)
 
-**From source:**
+1. Download `CodexTransfer.exe` from [Releases](https://github.com/Tommie-P-xl/codex-transfer/releases)
+2. Double-click to run, no installation needed
+
+### Option 2: Run from source
+
 ```bash
 git clone https://github.com/Tommie-P-xl/codex-transfer.git
 cd codex-transfer
@@ -206,17 +64,88 @@ pip install ttkbootstrap Pillow
 python main.py
 ```
 
-**Build exe:**
+### Option 3: Build exe
+
 ```bash
 pip install -r requirements.txt
 python build.py
 # Output: dist/CodexTransfer.exe
 ```
 
+### GitHub Actions
+
+- Push a `v*` tag to auto-build `CodexTransfer.exe` on `windows-latest`
+- Build artifacts are uploaded as Actions artifacts
+- Tag builds auto-attach `dist/CodexTransfer.exe` to the GitHub Release
+
+## Configuration
+
+| Item | Default | Description |
+|------|---------|-------------|
+| Codex Path | `~/.codex` | Changeable via UI, persisted in `%APPDATA%/CodexTransfer/config.json` |
+| Theme | `auto` | `auto` follows system / `dark` / `light` |
+| Window Size | `960x620` | Auto-saved on close |
+
+### Codex Data Directory
+
+```
+~/.codex/
+├── state_*.sqlite          # Session metadata (threads table)
+├── sessions/               # Session content (JSONL files)
+│   └── YYYY/MM/DD/
+│       └── rollout-*.jsonl
+└── archived_sessions/      # Archived sessions
+```
+
+## Project Structure
+
+```
+CodexTransfer/
+├── main.py                 # Entry: single-instance + DPI + launch UI
+├── core/
+│   ├── config.py           # Config management (%APPDATA% persistence)
+│   ├── database.py         # SQLite CRUD (threads table)
+│   └── rollout.py          # JSONL file operations (rewrite/copy/delete)
+├── ui/
+│   ├── app.py              # Main window (filter/table/actions/status)
+│   ├── theme.py            # Windows theme detection (registry)
+│   └── widgets.py          # Custom widgets (CheckboxTreeview)
+├── assets/
+│   └── icon.ico            # App icon (multi-size ICO)
+├── .github/workflows/
+│   └── build-release.yml   # GitHub Actions auto-build
+├── build.py                # Nuitka build script
+├── requirements.txt        # Dependencies
+└── README.md               # This file
+```
+
 ## Tech Stack
 
-Python 3.10+ / tkinter + ttkbootstrap / sqlite3 / Pillow / Nuitka / ctypes (Windows API)
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.10+ |
+| UI Framework | tkinter + ttkbootstrap |
+| Database | sqlite3 (built-in) |
+| Icon | Pillow |
+| Packaging | Nuitka (native code, smaller, faster) |
+| System API | ctypes (Windows DWM / DPI / Mutex) |
+
+## Version History
+
+| Version | Date | Description |
+|---------|------|-------------|
+| v1.4.0 | 2026-06-30 | **UI Refactor**: Compact single-row action bar; merged move/copy into unified buttons; fixed window sizing for high-DPI displays; improved visual polish |
+| v1.3.0 | 2026-06-29 | **DPI Aware**: Supports any resolution (1366×768–3840×2160) and DPI scaling (100%–200%); filter/action bars use responsive grid layout |
+| v1.2.0 | 2026-06-29 | **UI Optimization**: Fixed high-DPI UI crowding; screen-ratio adaptive window; dynamic column width, center alignment, row height |
+| v1.1.0 | 2026-06-09 | **Size Optimization**: Switched to Nuitka compilation, exe size reduced from ~32MB to ~6–9MB |
+| v1.0.0 | 2026-06-07 | **Initial Release**: Browse/filter/move/copy/delete, theme sync, single instance, DPI aware, GitHub Actions |
 
 ## License
 
 [MIT License](LICENSE)
+
+## Acknowledgements
+
+- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap) — Modern tkinter themes
+- [Nuitka](https://nuitka.net/) — Python compiler
+- [OpenAI Codex](https://github.com/openai/codex) — The tool this manages
